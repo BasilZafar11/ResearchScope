@@ -4,9 +4,7 @@ ResearchScope helps researchers evaluate novelty, uncover prior work, verify cla
 
 ## Available features
 
-The ResearchScope research workspace is available at `/research-scope`, with its prepared report at `/research-scope/reports/sample`. It retains the paper/patent novelty workflow and adds ten integrity tools for publication updates, opposing findings, citation support, question precision, statistical planning, reproducibility packages, artifact audits, extraction reconciliation, multilingual discovery, and sensitive-data readiness. See [behavior, verification, and limits](docs/RESEARCH_INTEGRITY_FEATURES.md). Integrity records stay in the browser and are exportable; Crossref metadata requests run only on explicit user actions.
-
-[ResearchScope completion backlog](docs/RESEARCHSCOPE_COMPLETION.md) tracks implementation and tasks that require owner credentials or decisions.
+The ResearchScope research workspace is available at `/research-scope`, with its prepared report at `/research-scope/reports/sample`. It retains the paper/patent novelty workflow and adds ten integrity tools for publication updates, opposing findings, citation support, question precision, statistical planning, reproducibility packages, artifact audits, extraction reconciliation, multilingual discovery, and sensitive-data readiness. Integrity records are exportable and can be explicitly shared through the research workspace; Crossref metadata requests run only on explicit user actions.
 
 ## Retained market tools
 
@@ -25,11 +23,9 @@ Completed reports now open a decision workspace with ten additional tools:
 9. Experiment prioritization within cost/time budgets, with observed results.
 10. Evidence-backed editable pitch with saved experiment results, Markdown download and browser print/PDF.
 
-See [tool behavior and limitations](docs/VENTUREATLAS_DECISION_TOOLS.md).
-
 ## Submission and release
 
-[Public repository](https://github.com/BasilZafar11/ResearchScope) · [Deployment guide](docs/DEPLOYMENT.md) · [Research completion status](docs/RESEARCHSCOPE_COMPLETION.md)
+[Public repository](https://github.com/BasilZafar11/ResearchScope)
 
 ## Run locally
 
