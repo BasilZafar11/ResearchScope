@@ -1,5 +1,6 @@
 import {useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
+import {dependencyProblem} from '../lib/researchReview';
 type Status='open'|'in progress'|'blocked'|'done';
 type Task={id:string;title:string;owner:string;due:string;claimId:string;experiment:string;evidenceIds:string[];evidenceUrl:string;completionNote:string;status:Status;blocker:string;dependsOn:string[];createdAt:string;updatedAt:string;history:{date:string;change:string}[]};
 type Draft=Pick<Task,'title'|'owner'|'due'|'claimId'|'experiment'|'evidenceIds'|'evidenceUrl'|'completionNote'|'blocker'|'dependsOn'>;
@@ -17,13 +18,15 @@ export function ResearchTaskBoard({reportId,claims,evidence}:{reportId:string;cl
   if(!draft.title.trim()){setError('Add a task title.');return}
   if(draft.evidenceUrl){try{const url=new URL(draft.evidenceUrl);if(!['http:','https:'].includes(url.protocol))throw new Error()}catch{setError('Evidence links must use http or https.');return}}
   const now=new Date().toISOString(),existing=tasks.find(task=>task.id===editing);
+  const problem=dependencyProblem(tasks,editing||'new-task',draft.dependsOn);if(problem){setError(problem);return;}
+  if(existing?.status==='done'&&draft.dependsOn.some(id=>tasks.find(item=>item.id===id)?.status!=='done')){setError('A completed task cannot acquire unfinished dependencies. Reopen it first.');return;}
   if(existing?.status==='done'&&!draft.completionNote.trim()&&!draft.evidenceUrl.trim()&&!draft.evidenceIds.length){setError('Keep completion evidence attached before saving a completed task.');return}
   const task:Task={...draft,id:editing||crypto.randomUUID(),status:existing?.status||'open',createdAt:existing?.createdAt||now,updatedAt:now,history:[...(existing?.history||[]),{date:now,change:editing?'Task details updated':'Task created'}]};
   persist([task,...tasks.filter(item=>item.id!==task.id)]);setDraft(blank());setEditing('');setError('');
  };
  const edit=(task:Task)=>{setEditing(task.id);setDraft({...task})};
- const updateStatus=(task:Task,status:Status)=>{if(status==='done'&&!task.completionNote.trim()&&!task.evidenceUrl.trim()&&!task.evidenceIds.length){setError('Add completion evidence before marking this task done.');return}if(status==='blocked'&&!task.blocker.trim()){setError('Record the blocker before using the blocked status.');return}const now=new Date().toISOString();persist(tasks.map(item=>item.id===task.id?{...item,status,updatedAt:now,history:[...item.history,{date:now,change:'Status set to '+status}]}:item));setError('')};
- const remove=(id:string)=>persist(tasks.filter(task=>task.id!==id));
+ const updateStatus=(task:Task,status:Status)=>{if(status==='done'&&task.dependsOn.some(id=>tasks.find(item=>item.id===id)?.status!=='done')){setError('Complete every dependency before marking this task done.');return}if(status==='done'&&!task.completionNote.trim()&&!task.evidenceUrl.trim()&&!task.evidenceIds.length){setError('Add completion evidence before marking this task done.');return}if(status==='blocked'&&!task.blocker.trim()){setError('Record the blocker before using the blocked status.');return}const now=new Date().toISOString();persist(tasks.map(item=>item.id===task.id?{...item,status,updatedAt:now,history:[...item.history,{date:now,change:'Status set to '+status}]}:item));setError('')};
+ const remove=(id:string)=>{if(tasks.some(task=>task.dependsOn.includes(id))){setError('Remove this task from dependent tasks before deleting it.');return;}persist(tasks.filter(task=>task.id!==id));};
  return <>
   <p>Assign review work and experiments to your team. This version saves to the current browser only; names are labels entered by the researcher and are not verified identities.</p>
   <div className="task-board-counts"><span>Open <b>{tasks.filter(task=>task.status==='open').length}</b></span><span>In progress <b>{tasks.filter(task=>task.status==='in progress').length}</b></span><span>Blocked <b>{tasks.filter(task=>task.status==='blocked').length}</b></span><span>Overdue <b>{overdue}</b></span></div>

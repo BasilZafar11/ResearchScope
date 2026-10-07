@@ -58,9 +58,9 @@ export function DatasetLeakageAudit(){
   if(['all splits','validation or test'].includes(preprocessing))result.push({kind:'preprocessing exposure reported',value:'Fitted preprocessing used '+preprocessing,splits:[...selected],rows:[]});
   return result;
  },[data,splitColumn,sampleColumn,subjectColumn,hashColumn,train,validation,test,timeColumn,strictTime,textColumn,nearEnabled,labelColumn,predictors,preprocessing]);
- const onFile=async(file?:File)=>{if(!file)return;setError('');setData(null);if(file.size>2000000){setError('Select a CSV manifest under 2 MB.');return}try{const parsed=parseCsv(await file.text());setData(parsed);setFileName(file.name);setSplitColumn('');setSampleColumn('');setSubjectColumn('');setHashColumn('');setTrain('');setValidation('');setTest('')}catch(reason){setFileName('');setError(reason instanceof Error?reason.message:'The CSV could not be read.')}};
+ const onFile=async(file?:File)=>{if(!file)return;setError('');setData(null);if(file.size>2000000){setError('Select a CSV manifest under 2 MB.');return}try{const parsed=parseCsv(await file.text());setData(parsed);setFileName(file.name);setSplitColumn('');setSampleColumn('');setSubjectColumn('');setHashColumn('');setTrain('');setValidation('');setTest('');setTimeColumn('');setTextColumn('');setNearEnabled(false);setLabelColumn('');setPredictors([]);setPreprocessing('unknown')}catch(reason){setFileName('');setError(reason instanceof Error?reason.message:'The CSV could not be read.')}};
  const overlapCount=findings.filter(item=>item.kind.includes('shared across splits')).length;
- const auditReady=Boolean(data&&splitColumn&&train&&test&&train!==test&&(sampleColumn||subjectColumn||hashColumn));
+ const auditReady=Boolean(data&&splitColumn&&train&&test&&train!==test&&(!validation||validation!==train&&validation!==test)&&(sampleColumn||subjectColumn||hashColumn||timeColumn||labelColumn||nearEnabled&&textColumn||preprocessing!=='unknown'));
  return <>
   <p>Upload a CSV manifest to compare explicit split labels. The file and row values stay in this browser session. Results are cleared when the page reloads; export them yourself if you need a record.</p>
   <label>CSV manifest<input type="file" accept=".csv,text/csv" onChange={event=>void onFile(event.target.files?.[0])}/></label>
