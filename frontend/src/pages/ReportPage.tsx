@@ -1,10 +1,11 @@
-import {lazy,Suspense} from 'react';
+import {lazy,Suspense,useEffect,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {Link,useParams} from 'react-router-dom';
 import {noveltyApi} from '../api/novelty';
 import type {Evidence,Job,NoveltyReport} from '../types/novelty';
 import {NoveltyWorkspace} from '../components/NoveltyWorkspace';
 import {ResearchToolkit} from '../components/ResearchToolkit';
+import {ResearchWorkspaceSync} from '../components/ResearchWorkspaceSync';
 const ResearchDefenseLab=lazy(()=>import('../components/ResearchDefenseLab').then(module=>({default:module.ResearchDefenseLab})));
 const ResearchIntegrityLab=lazy(()=>import('../components/ResearchIntegrityLab').then(module=>({default:module.ResearchIntegrityLab})));
 
@@ -14,6 +15,8 @@ function EvidenceCard({item}: {item:Evidence}){return <article className="eviden
  {item.details&&Object.keys(item.details).length>0&&<details className="patent-details"><summary>Patent details</summary><dl>{Object.entries(item.details).filter(([,v])=>v&&(!Array.isArray(v)||v.length)).map(([k,v])=><div key={k}><dt>{k.replaceAll('_',' ')}</dt><dd>{typeof v==='string'?v:Array.isArray(v)?v.map(String).join('; '):JSON.stringify(v)}</dd></div>)}</dl></details>}</article>}
 
 export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:string;reportBase?:string}){const {id=''}=useParams();const sample=id==='sample';const query=useQuery({queryKey:['novelty-report',id],queryFn:()=>sample?noveltyApi.sample():noveltyApi.report(id),refetchInterval:q=>!q.state.data||isJob(q.state.data as NoveltyReport|Job)?1800:false});
+ const [recordRevision,setRecordRevision]=useState(0);
+ useEffect(()=>{const update=()=>setRecordRevision(value=>value+1);window.addEventListener('research-workspace-applied',update);return()=>window.removeEventListener('research-workspace-applied',update);},[]);
  if(query.isPending)return <div className="wrap status-page"><p className="kicker">Opening evidence report</p><p role="status">Loading…</p></div>;
  if(query.isError)return <div className="wrap status-page"><p className="kicker">Report unavailable</p><h1>We couldn’t open this report.</h1><p>{query.error instanceof Error?query.error.message:'The report may have expired or its link may be incomplete.'}</p><Link className="primary-button inline-button" to={homePath}>Start a new search</Link></div>;
  const result=query.data as NoveltyReport|Job;
@@ -33,9 +36,10 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
   <section className="report-section"><div className="section-head"><div><p className="kicker">People and organizations</p><h2>Who is active in these results?</h2></div><p>Counts describe retrieved records only.</p></div><div className="method-grid"><div><h3>Patent assignees</h3><ul className="people-list">{(r.assignee_summary||[]).map(x=><li key={x.name}>{x.name}<span>{x.count}</span></li>)}</ul>{!(r.assignee_summary||[]).length&&<p className="hint">No assignee names returned.</p>}</div><div><h3>Inventors</h3><ul className="people-list">{(r.inventor_summary||[]).map(x=><li key={x.name}>{x.name}<span>{x.count}</span></li>)}</ul>{!(r.inventor_summary||[]).length&&<p className="hint">No inventor names returned.</p>}</div><div><h3>Paper authors</h3><ul className="people-list">{(r.author_summary||[]).map(x=><li key={x.name}>{x.name}<span>{x.count}</span></li>)}</ul>{!(r.author_summary||[]).length&&<p className="hint">No author names returned.</p>}</div></div></section>
   {r.ai_analysis.claim_explanations?.length||r.ai_analysis.areas_needing_deeper_search?.length||r.ai_analysis.executive_summary?<section className="report-section"><div className="section-head"><div><p className="kicker">Optional AI notes</p><h2>Evidence explanation</h2></div><p>AI text explains saved evidence; it does not assign scores.</p></div><p className="ai-note">{r.ai_analysis.executive_summary}</p>{r.ai_analysis.claim_explanations?.map((x,i)=><article className="ai-explanation" key={`${x.claim_id}-${i}`}><strong>{r.claims.find(c=>c.id===x.claim_id)?.text||'Research claim'} · {x.assessment}</strong><p>{x.explanation}</p>{x.limitations.length>0&&<small>Limits: {x.limitations.join(' · ')}</small>}</article>)}{r.ai_analysis.areas_needing_deeper_search?.map((x,i)=><article className="ai-explanation" key={`deeper-${i}`}><strong>Search further: {r.claims.find(c=>c.id===x.claim_id)?.text||'Research claim'}</strong><p>{x.reason}</p>{x.suggested_queries.map((q,j)=><code className="suggested-query" key={j}>{q}</code>)}</article>)}</section>:null}
   <NoveltyWorkspace report={r} id={id} reportBase={reportBase}/>
-  <ResearchToolkit report={r} id={id}/>
-  <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab report={r} id={id}/></Suspense>
-  <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab report={r} id={id}/></Suspense>
+  <ResearchWorkspaceSync key={id} report={r} id={id}/>
+  <ResearchToolkit key={id+recordRevision} report={r} id={id}/>
+  <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab key={id+recordRevision} report={r} id={id}/></Suspense>
+  <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab key={id+recordRevision} report={r} id={id}/></Suspense>
   <section className="report-section"><div className="section-head"><div><p className="kicker">Reproducibility</p><h2>Searches and scoring</h2></div></div><details open><summary>Exact searches used</summary><ul className="query-list">{r.queries.map((q,i)=><li key={i}><span>{q.engine}</span><code>{q.query}</code></li>)}</ul></details><div className="method-grid"><div><h3>Overlap formula</h3><code>0.50 × top match + 0.30 × mean top five + 0.20 × high-match breadth</code></div><div><h3>Per-record similarity</h3><code>0.60 × TF-IDF + 0.25 × claim coverage + 0.15 × phrase coverage</code></div><div><h3>Limits</h3><p>Search results are incomplete, text similarity is not a legal or scientific judgment, and weak results may reflect query coverage or inaccessible sources.</p></div></div>{r.warnings.map((w,i)=><p key={i} className="warning-line">{w}</p>)}{r.ai_analysis.warnings.map((w,i)=><p key={`ai-${i}`} className="warning-line">{w}</p>)}</section>
   <div className="report-end"><span>Methodology {r.methodology_version} · {r.credential_mode} mode</span><Link to={homePath}>Search another idea</Link></div>
  </div>
