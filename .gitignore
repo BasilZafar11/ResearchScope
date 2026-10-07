@@ -1,0 +1,22 @@
+.env*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+*.db-*
+*.sqlite*
+node_modules/
+dist/
+coverage/
+.DS_Store
+.vercel/
+artifacts/
+backend/tests/fixtures/live/
+*.log
+*.tsbuildinfo
+
+# Local presentation and submission materials
+docs/screenshots/
+docs/SUBMISSION_DRAFT.md
