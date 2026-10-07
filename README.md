@@ -1,10 +1,14 @@
-# VentureAtlas
+# ResearchScope
 
-VentureAtlas helps founders research a business category in a city, inspect market evidence, and turn assumptions into validation plans. VentureAtlas is the active app. The retained NoveltyMap implementation is documented in [its archive](docs/NOVELTYMAP_ARCHIVE.md).
+ResearchScope helps researchers evaluate novelty, uncover prior work, verify claims, compare evidence, and design credible studies in a traceable workspace. The home URL opens ResearchScope; retained market tools are available at `/market`.
 
 ## Available features
 
 The ResearchScope research workspace is available at `/research-scope`, with its prepared report at `/research-scope/reports/sample`. It retains the paper/patent novelty workflow and adds ten integrity tools for publication updates, opposing findings, citation support, question precision, statistical planning, reproducibility packages, artifact audits, extraction reconciliation, multilingual discovery, and sensitive-data readiness. See [behavior, verification, and limits](docs/RESEARCH_INTEGRITY_FEATURES.md). Integrity records stay in the browser and are exportable; Crossref metadata requests run only on explicit user actions.
+
+[ResearchScope completion backlog](docs/RESEARCHSCOPE_COMPLETION.md) tracks implementation and tasks that require owner credentials or decisions.
+
+## Retained market tools
 
 Market reports combine competitor listings, review topics, news, trends and advertising evidence, with source links, evidence completeness, relevance review and planning tools. The existing research workspace supports directions, forums, autocomplete, events, jobs, shopping, hotels, flights, images and Scholar.
 
@@ -25,7 +29,7 @@ See [tool behavior and limitations](docs/VENTUREATLAS_DECISION_TOOLS.md).
 
 ## Submission and release
 
-[Public repository](https://github.com/BasilZafar11/VentureAtlas) · [Deployment guide](docs/DEPLOYMENT.md) · [Demo script](docs/DEMO.md) · [Submission draft](docs/SUBMISSION_DRAFT.md) · [Completion status](docs/COMPLETION_STATUS.md)
+[Public repository](https://github.com/BasilZafar11/ResearchScope) · [Deployment guide](docs/DEPLOYMENT.md) · [Research completion status](docs/RESEARCHSCOPE_COMPLETION.md)
 
 ## Run locally
 

@@ -169,7 +169,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title='VentureAtlas · Market opportunity research', lifespan=lifespan)
+app = FastAPI(title='ResearchScope · Research evidence workspace', lifespan=lifespan)
 app.include_router(venture_router)
 app.include_router(integrity_router)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type','X-Review-Token'])
