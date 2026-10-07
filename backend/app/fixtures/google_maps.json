@@ -1,0 +1,83 @@
+{
+  "fixture_notice": "Synthetic test data; not real businesses or observations.",
+  "local_results": [
+    {
+      "title": "Demo River Workspace",
+      "data_id": "fixture-place-0",
+      "rating": 4.3,
+      "reviews": 240,
+      "address": "Illustrative location 1, Pune",
+      "gps_coordinates": {
+        "latitude": 18.552,
+        "longitude": 73.795
+      },
+      "type": "Coworking space",
+      "website": null
+    },
+    {
+      "title": "Demo Studio Collective",
+      "data_id": "fixture-place-1",
+      "rating": 4.1,
+      "reviews": 190,
+      "address": "Illustrative location 2, Pune",
+      "gps_coordinates": {
+        "latitude": 18.563,
+        "longitude": 73.779
+      },
+      "type": "Coworking space",
+      "website": null
+    },
+    {
+      "title": "Demo Central Offices",
+      "data_id": "fixture-place-2",
+      "rating": 4.6,
+      "reviews": 125,
+      "address": "Illustrative location 3, Pune",
+      "gps_coordinates": {
+        "latitude": 18.536,
+        "longitude": 73.828
+      },
+      "type": "Coworking space",
+      "website": null
+    },
+    {
+      "title": "Demo East Workrooms",
+      "data_id": "fixture-place-3",
+      "rating": 4.4,
+      "reviews": 84,
+      "address": "Illustrative location 4, Pune",
+      "gps_coordinates": {
+        "latitude": 18.548,
+        "longitude": 73.898
+      },
+      "type": "Coworking space",
+      "website": null
+    },
+    {
+      "title": "Demo Green Desks",
+      "data_id": "fixture-place-4",
+      "rating": 4.0,
+      "reviews": 60,
+      "address": "Illustrative location 5, Pune",
+      "gps_coordinates": {
+        "latitude": 18.582,
+        "longitude": 73.739
+      },
+      "type": "Coworking space",
+      "website": null
+    },
+    {
+      "title": "Demo Station Workspace",
+      "data_id": "fixture-place-5",
+      "rating": 4.5,
+      "reviews": 47,
+      "address": "Illustrative location 6, Pune",
+      "gps_coordinates": {
+        "latitude": 18.529,
+        "longitude": 73.866
+      },
+      "type": "Coworking space",
+      "website": null
+    }
+  ]
+}

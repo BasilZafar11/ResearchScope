@@ -1,0 +1,14 @@
+{
+  "ad_creatives": [
+    {
+      "advertiser": "WeWork",
+      "advertiser_id": "fixture-advertiser",
+      "ad_creative_id": "fixture-creative",
+      "format": "text",
+      "target_domain": "wework.com",
+      "first_shown": 1788220800,
+      "last_shown": 1790726400,
+      "details_link": null
+    }
+  ]
+}

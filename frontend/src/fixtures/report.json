@@ -1,0 +1,1104 @@
+{
+  "id": "41ddcbb1-2a59-4ea1-b7e8-c10f1f3d5b3e",
+  "status": "complete",
+  "input": {
+    "business_category": "Coworking space",
+    "city": "Pune",
+    "country": "India",
+    "keywords": [
+      "coworking Pune",
+      "shared office Pune",
+      "flexible office Pune"
+    ],
+    "known_competitors": [
+      "WeWork",
+      "Awfis"
+    ]
+  },
+  "overall_score": 66,
+  "confidence_score": 100,
+  "confidence_label": "High",
+  "interpretation": "Mixed-positive",
+  "component_scores": {
+    "demand": 63.07,
+    "competition_gap": 62.8,
+    "unmet_need": 70.0,
+    "market_momentum": 71.08,
+    "advertising_gap": 65.0
+  },
+  "recommendation": {
+    "headline": "Some attractive signals, with meaningful risks requiring validation.",
+    "strengths": [
+      {
+        "text": "Market momentum is 71.08/100, among the strongest available components.",
+        "href": "#market_momentum"
+      },
+      {
+        "text": "Unmet need is 70/100, among the strongest available components.",
+        "href": "#unmet_need"
+      }
+    ],
+    "risks": [
+      {
+        "text": "Competition gap is 62.8/100, among the weaker available components to validate.",
+        "href": "#competition_gap"
+      },
+      {
+        "text": "Demand is 63.07/100, among the weaker available components to validate.",
+        "href": "#demand"
+      }
+    ],
+    "next_checks": [
+      {
+        "text": "High confidence (100/100) measures source completeness. Validate demand, unit economics, and local competition directly.",
+        "href": "#methodology"
+      },
+      {
+        "text": "Ask customers about access, transport and parking: 3 sampled mentions across 3 competitors.",
+        "href": "#unmet_need"
+      },
+      {
+        "text": "Ask customers about contracts and flexibility: 3 sampled mentions across 3 competitors.",
+        "href": "#unmet_need"
+      },
+      {
+        "text": "Verify the recent positive news signal: Sample: flexible office expansion announced",
+        "href": "#market_momentum"
+      }
+    ]
+  },
+  "competitors": [
+    {
+      "data_id": "fixture-place-0",
+      "name": "Demo River Workspace",
+      "business_type": "Coworking space",
+      "rating": 4.3,
+      "review_count": 240,
+      "address": "Illustrative location 1, Pune",
+      "latitude": 18.552,
+      "longitude": 73.795,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+River+Workspace+Illustrative+location+1%2C+Pune",
+      "rank": 1
+    },
+    {
+      "data_id": "fixture-place-1",
+      "name": "Demo Studio Collective",
+      "business_type": "Coworking space",
+      "rating": 4.1,
+      "review_count": 190,
+      "address": "Illustrative location 2, Pune",
+      "latitude": 18.563,
+      "longitude": 73.779,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Studio+Collective+Illustrative+location+2%2C+Pune",
+      "rank": 2
+    },
+    {
+      "data_id": "fixture-place-2",
+      "name": "Demo Central Offices",
+      "business_type": "Coworking space",
+      "rating": 4.6,
+      "review_count": 125,
+      "address": "Illustrative location 3, Pune",
+      "latitude": 18.536,
+      "longitude": 73.828,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Central+Offices+Illustrative+location+3%2C+Pune",
+      "rank": 3
+    },
+    {
+      "data_id": "fixture-place-3",
+      "name": "Demo East Workrooms",
+      "business_type": "Coworking space",
+      "rating": 4.4,
+      "review_count": 84,
+      "address": "Illustrative location 4, Pune",
+      "latitude": 18.548,
+      "longitude": 73.898,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+East+Workrooms+Illustrative+location+4%2C+Pune",
+      "rank": 4
+    },
+    {
+      "data_id": "fixture-place-4",
+      "name": "Demo Green Desks",
+      "business_type": "Coworking space",
+      "rating": 4.0,
+      "review_count": 60,
+      "address": "Illustrative location 5, Pune",
+      "latitude": 18.582,
+      "longitude": 73.739,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Green+Desks+Illustrative+location+5%2C+Pune",
+      "rank": 5
+    },
+    {
+      "data_id": "fixture-place-5",
+      "name": "Demo Station Workspace",
+      "business_type": "Coworking space",
+      "rating": 4.5,
+      "review_count": 47,
+      "address": "Illustrative location 6, Pune",
+      "latitude": 18.529,
+      "longitude": 73.866,
+      "website": null,
+      "price": null,
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Station+Workspace+Illustrative+location+6%2C+Pune",
+      "rank": 6
+    }
+  ],
+  "trend_series": [
+    {
+      "date": "Oct 2025",
+      "timestamp": 1759276800.0,
+      "values": {
+        "coworking Pune": 45.0,
+        "shared office Pune": 35.0,
+        "flexible office Pune": 24.0
+      }
+    },
+    {
+      "date": "Oct 2025",
+      "timestamp": 1761868800.0,
+      "values": {
+        "coworking Pune": 51.0,
+        "shared office Pune": 40.0,
+        "flexible office Pune": 29.0
+      }
+    },
+    {
+      "date": "Nov 2025",
+      "timestamp": 1764460800.0,
+      "values": {
+        "coworking Pune": 57.0,
+        "shared office Pune": 45.0,
+        "flexible office Pune": 34.0
+      }
+    },
+    {
+      "date": "Dec 2025",
+      "timestamp": 1767052800.0,
+      "values": {
+        "coworking Pune": 54.0,
+        "shared office Pune": 41.0,
+        "flexible office Pune": 30.0
+      }
+    },
+    {
+      "date": "Jan 2026",
+      "timestamp": 1769644800.0,
+      "values": {
+        "coworking Pune": 60.0,
+        "shared office Pune": 46.0,
+        "flexible office Pune": 35.0
+      }
+    },
+    {
+      "date": "Feb 2026",
+      "timestamp": 1772236800.0,
+      "values": {
+        "coworking Pune": 66.0,
+        "shared office Pune": 51.0,
+        "flexible office Pune": 40.0
+      }
+    },
+    {
+      "date": "Mar 2026",
+      "timestamp": 1774828800.0,
+      "values": {
+        "coworking Pune": 63.0,
+        "shared office Pune": 47.0,
+        "flexible office Pune": 36.0
+      }
+    },
+    {
+      "date": "Apr 2026",
+      "timestamp": 1777420800.0,
+      "values": {
+        "coworking Pune": 69.0,
+        "shared office Pune": 52.0,
+        "flexible office Pune": 41.0
+      }
+    },
+    {
+      "date": "May 2026",
+      "timestamp": 1780012800.0,
+      "values": {
+        "coworking Pune": 75.0,
+        "shared office Pune": 57.0,
+        "flexible office Pune": 46.0
+      }
+    },
+    {
+      "date": "Jun 2026",
+      "timestamp": 1782604800.0,
+      "values": {
+        "coworking Pune": 72.0,
+        "shared office Pune": 53.0,
+        "flexible office Pune": 42.0
+      }
+    },
+    {
+      "date": "Jul 2026",
+      "timestamp": 1785196800.0,
+      "values": {
+        "coworking Pune": 78.0,
+        "shared office Pune": 58.0,
+        "flexible office Pune": 47.0
+      }
+    },
+    {
+      "date": "Aug 2026",
+      "timestamp": 1787788800.0,
+      "values": {
+        "coworking Pune": 84.0,
+        "shared office Pune": 63.0,
+        "flexible office Pune": 52.0
+      }
+    }
+  ],
+  "review_topics": [
+    {
+      "topic": "Access, transport and parking",
+      "mentions": 3,
+      "competitor_count": 3,
+      "repeated": true,
+      "excerpts": [
+        {
+          "competitor": "Demo River Workspace",
+          "data_id": "fixture-place-0",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        },
+        {
+          "competitor": "Demo Studio Collective",
+          "data_id": "fixture-place-1",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        },
+        {
+          "competitor": "Demo Central Offices",
+          "data_id": "fixture-place-2",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        }
+      ]
+    },
+    {
+      "topic": "Contracts and flexibility",
+      "mentions": 3,
+      "competitor_count": 3,
+      "repeated": true,
+      "excerpts": [
+        {
+          "competitor": "Demo River Workspace",
+          "data_id": "fixture-place-0",
+          "rating": 2.0,
+          "text": "The contract deposit refund was slow.",
+          "published_at": "2026-09-23T12:00:00+00:00",
+          "source_url": null,
+          "likes": 2
+        },
+        {
+          "competitor": "Demo Studio Collective",
+          "data_id": "fixture-place-1",
+          "rating": 2.0,
+          "text": "The contract deposit refund was slow.",
+          "published_at": "2026-09-23T12:00:00+00:00",
+          "source_url": null,
+          "likes": 2
+        },
+        {
+          "competitor": "Demo Central Offices",
+          "data_id": "fixture-place-2",
+          "rating": 2.0,
+          "text": "The contract deposit refund was slow.",
+          "published_at": "2026-09-23T12:00:00+00:00",
+          "source_url": null,
+          "likes": 2
+        }
+      ]
+    },
+    {
+      "topic": "Noise and crowding",
+      "mentions": 3,
+      "competitor_count": 3,
+      "repeated": true,
+      "excerpts": [
+        {
+          "competitor": "Demo River Workspace",
+          "data_id": "fixture-place-0",
+          "rating": 3.0,
+          "text": "Very noisy and crowded in the afternoon.",
+          "published_at": "2026-09-22T12:00:00+00:00",
+          "source_url": null,
+          "likes": 3
+        },
+        {
+          "competitor": "Demo Studio Collective",
+          "data_id": "fixture-place-1",
+          "rating": 3.0,
+          "text": "Very noisy and crowded in the afternoon.",
+          "published_at": "2026-09-22T12:00:00+00:00",
+          "source_url": null,
+          "likes": 3
+        },
+        {
+          "competitor": "Demo Central Offices",
+          "data_id": "fixture-place-2",
+          "rating": 3.0,
+          "text": "Very noisy and crowded in the afternoon.",
+          "published_at": "2026-09-22T12:00:00+00:00",
+          "source_url": null,
+          "likes": 3
+        }
+      ]
+    },
+    {
+      "topic": "Pricing and hidden fees",
+      "mentions": 3,
+      "competitor_count": 3,
+      "repeated": true,
+      "excerpts": [
+        {
+          "competitor": "Demo River Workspace",
+          "data_id": "fixture-place-0",
+          "rating": 3.0,
+          "text": "Pricing includes an expensive hidden fee.",
+          "published_at": "2026-09-24T12:00:00+00:00",
+          "source_url": null,
+          "likes": 1
+        },
+        {
+          "competitor": "Demo Studio Collective",
+          "data_id": "fixture-place-1",
+          "rating": 3.0,
+          "text": "Pricing includes an expensive hidden fee.",
+          "published_at": "2026-09-24T12:00:00+00:00",
+          "source_url": null,
+          "likes": 1
+        },
+        {
+          "competitor": "Demo Central Offices",
+          "data_id": "fixture-place-2",
+          "rating": 3.0,
+          "text": "Pricing includes an expensive hidden fee.",
+          "published_at": "2026-09-24T12:00:00+00:00",
+          "source_url": null,
+          "likes": 1
+        }
+      ]
+    },
+    {
+      "topic": "Quality and reliability",
+      "mentions": 3,
+      "competitor_count": 3,
+      "repeated": true,
+      "excerpts": [
+        {
+          "competitor": "Demo River Workspace",
+          "data_id": "fixture-place-0",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        },
+        {
+          "competitor": "Demo Studio Collective",
+          "data_id": "fixture-place-1",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        },
+        {
+          "competitor": "Demo Central Offices",
+          "data_id": "fixture-place-2",
+          "rating": 2.0,
+          "text": "The internet was unreliable and parking was difficult.",
+          "published_at": "2026-09-25T12:00:00+00:00",
+          "source_url": null,
+          "likes": 0
+        }
+      ]
+    }
+  ],
+  "news": [
+    {
+      "title": "Sample: flexible office expansion announced",
+      "source": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-0",
+      "published_at": "2026-09-27T08:00:00+00:00",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "thumbnail": null,
+      "sentiment": "positive",
+      "matched_keywords": [
+        "expansion"
+      ],
+      "weight": 0.857
+    },
+    {
+      "title": "Sample: coworking investment planned",
+      "source": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-1",
+      "published_at": "2026-09-26T08:00:00+00:00",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "thumbnail": null,
+      "sentiment": "positive",
+      "matched_keywords": [
+        "investment"
+      ],
+      "weight": 0.833
+    },
+    {
+      "title": "Sample: new business partnership",
+      "source": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-2",
+      "published_at": "2026-09-25T08:00:00+00:00",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "thumbnail": null,
+      "sentiment": "positive",
+      "matched_keywords": [
+        "partnership"
+      ],
+      "weight": 0.811
+    },
+    {
+      "title": "Sample: office sector faces decline",
+      "source": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-3",
+      "published_at": "2026-09-24T08:00:00+00:00",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "thumbnail": null,
+      "sentiment": "negative",
+      "matched_keywords": [
+        "decline"
+      ],
+      "weight": 0.789
+    },
+    {
+      "title": "Sample: local workplace survey published",
+      "source": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-4",
+      "published_at": "2026-09-23T08:00:00+00:00",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "thumbnail": null,
+      "sentiment": "neutral",
+      "matched_keywords": [],
+      "weight": 0.769
+    }
+  ],
+  "advertising": [
+    {
+      "advertiser": "WeWork",
+      "advertiser_id": "fixture-advertiser",
+      "creative_id": "fixture-creative",
+      "registration_country": null,
+      "format": "text",
+      "first_shown": "2026-09-01T00:00:00+00:00",
+      "last_shown": "2026-09-30T00:00:00+00:00",
+      "platforms": [],
+      "destination_url": "https://wework.com",
+      "source_url": null,
+      "matched_query": "WeWork"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "d79bb9f7-9c92-44b3-a51b-f295abd84ae6",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo River Workspace",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+River+Workspace+Illustrative+location+1%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "62860139-890e-4c0f-9daf-d76234f78701",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo Studio Collective",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Studio+Collective+Illustrative+location+2%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "3a44b3c5-2515-4776-ba6b-2208aea9b994",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo Central Offices",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Central+Offices+Illustrative+location+3%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "49bad563-0a8e-400f-a287-c9a722542e93",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo East Workrooms",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+East+Workrooms+Illustrative+location+4%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-3"
+    },
+    {
+      "id": "1ee91ff5-110b-4bdc-bb65-9374f158bc48",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo Green Desks",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Green+Desks+Illustrative+location+5%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-4"
+    },
+    {
+      "id": "f159ab7e-ad6c-48d0-8099-83964d2ee971",
+      "engine": "google_maps",
+      "evidence_type": "maps",
+      "title": "Demo Station Workspace",
+      "snippet": null,
+      "source_name": "google_maps",
+      "source_url": "https://www.google.com/maps/search/?api=1&query=Demo+Station+Workspace+Illustrative+location+6%2C+Pune",
+      "published_at": null,
+      "data_id": "fixture-place-5"
+    },
+    {
+      "id": "47274f29-68bf-42c7-b25c-2ff8f96a1355",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "The internet was unreliable and parking was difficult.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-25T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "99dd327e-e49b-4d2d-9dfb-a0665762fa0f",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "Pricing includes an expensive hidden fee.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-24T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "5934a6a4-0cae-47de-a604-60b22df1ecff",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "The contract deposit refund was slow.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-23T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "20d1410b-4433-4b32-9144-65daf2becb42",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "Very noisy and crowded in the afternoon.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-22T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "d84b31f3-ffb9-4245-9c0e-094fa5283960",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "Comfortable desk and a helpful team.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-21T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "416fc5f8-a7aa-4e04-90f5-eae1cd907b10",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "A pleasant place to focus.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-20T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "fb7d9097-0844-4d36-b559-a0e8ec9f3be2",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "Good meeting rooms.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-19T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "3cff907f-4c35-4890-b576-817454c61dae",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo River Workspace",
+      "snippet": "Easy to arrange a visit.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-18T12:00:00+00:00",
+      "data_id": "fixture-place-0"
+    },
+    {
+      "id": "b139023f-a02a-4baa-a197-40002dd77384",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "The internet was unreliable and parking was difficult.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-25T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "ac9b9739-ee99-4e6a-931d-920da0feecb0",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "Pricing includes an expensive hidden fee.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-24T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "aa03e41c-da8e-4017-9ce8-262e244a140e",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "The contract deposit refund was slow.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-23T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "f50cade8-645e-4f5f-ac6c-09b0ec454111",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "Very noisy and crowded in the afternoon.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-22T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "0e43fd81-51f7-4421-bb52-dd5a60776a64",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "Comfortable desk and a helpful team.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-21T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "8b99b132-c998-4066-810c-6f9f1ea74de4",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "A pleasant place to focus.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-20T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "21affb7c-701d-4cc1-ab95-c0b46266bda1",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "Good meeting rooms.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-19T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "a85ef1ea-aae3-4267-8b6c-adadc9ca7e89",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Studio Collective",
+      "snippet": "Easy to arrange a visit.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-18T12:00:00+00:00",
+      "data_id": "fixture-place-1"
+    },
+    {
+      "id": "9b5a2c64-ba34-445b-a546-c6f6bc1db530",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "The internet was unreliable and parking was difficult.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-25T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "59d987ce-6831-4c0b-8a77-91a9aacb5e8c",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "Pricing includes an expensive hidden fee.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-24T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "2ea45dc4-bc0b-41cd-a450-7879eedc12f0",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "The contract deposit refund was slow.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-23T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "2c012774-5a47-4f4d-b2ed-37b57cb19362",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "Very noisy and crowded in the afternoon.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-22T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "b89a119d-7c25-4d94-b691-fbd6c99299ea",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "Comfortable desk and a helpful team.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-21T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "15658493-9c31-498a-9a07-965d6edbd3ae",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "A pleasant place to focus.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-20T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "3f332b36-cf9c-44ac-838a-0f073128c33e",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "Good meeting rooms.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-19T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "516b31e9-1a90-4ce1-b269-f349256e1760",
+      "engine": "google_maps_reviews",
+      "evidence_type": "reviews",
+      "title": "Demo Central Offices",
+      "snippet": "Easy to arrange a visit.",
+      "source_name": "google_maps_reviews",
+      "source_url": null,
+      "published_at": "2026-09-18T12:00:00+00:00",
+      "data_id": "fixture-place-2"
+    },
+    {
+      "id": "d1691b9e-cd48-4477-921b-7806ec912359",
+      "engine": "google_news",
+      "evidence_type": "news",
+      "title": "Sample: flexible office expansion announced",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "source_name": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-0",
+      "published_at": "2026-09-27T08:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "edc3da6f-0f3c-4ca8-86df-7eee22d260de",
+      "engine": "google_news",
+      "evidence_type": "news",
+      "title": "Sample: coworking investment planned",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "source_name": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-1",
+      "published_at": "2026-09-26T08:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "ae9e46eb-4676-46a5-8ff8-bb18807b0df9",
+      "engine": "google_news",
+      "evidence_type": "news",
+      "title": "Sample: new business partnership",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "source_name": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-2",
+      "published_at": "2026-09-25T08:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "0c8cda1b-afa6-422c-a9d0-ad779283ade7",
+      "engine": "google_news",
+      "evidence_type": "news",
+      "title": "Sample: office sector faces decline",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "source_name": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-3",
+      "published_at": "2026-09-24T08:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "a5f89ac3-230a-46fd-a2c5-89d19789017f",
+      "engine": "google_news",
+      "evidence_type": "news",
+      "title": "Sample: local workplace survey published",
+      "snippet": "Illustrative test article. This is not a real market event.",
+      "source_name": "Synthetic fixture",
+      "source_url": "https://example.com/sample-news-4",
+      "published_at": "2026-09-23T08:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "1c6d64b2-96ff-42b4-80e5-d9e1ed6fa47e",
+      "engine": "google_ads_transparency_center",
+      "evidence_type": "ads",
+      "title": "WeWork",
+      "snippet": null,
+      "source_name": "google_ads_transparency_center",
+      "source_url": null,
+      "published_at": "2026-09-30T00:00:00+00:00",
+      "data_id": null
+    },
+    {
+      "id": "847a0e10-635d-4694-a490-d80a3ec1b8e3",
+      "engine": "google_trends",
+      "evidence_type": "trends",
+      "title": "Google Trends keyword comparison",
+      "snippet": null,
+      "source_name": "Google Trends",
+      "source_url": "https://trends.google.com/trends/explore?q=coworking+Pune%2Cshared+office+Pune%2Cflexible+office+Pune&geo=IN&date=today+12-m",
+      "published_at": null
+    }
+  ],
+  "warnings": [
+    "Sample report: all observations are synthetic fixtures, not live market evidence. Fixture data describes only the Pune coworking example."
+  ],
+  "methodology_version": "1.0",
+  "methodology": {
+    "weights": {
+      "demand": 0.25,
+      "competition_gap": 0.25,
+      "unmet_need": 0.25,
+      "market_momentum": 0.15,
+      "advertising_gap": 0.1
+    },
+    "components": {
+      "demand": {
+        "keywords": [
+          {
+            "keyword": "coworking Pune",
+            "latest_average": 78.0,
+            "previous_average": 69.0,
+            "change_percent": 13.04,
+            "score": 63.04347826086956,
+            "points": 12
+          },
+          {
+            "keyword": "flexible office Pune",
+            "latest_average": 47.0,
+            "previous_average": 41.0,
+            "change_percent": 14.63,
+            "score": 64.6341463414634,
+            "points": 12
+          },
+          {
+            "keyword": "shared office Pune",
+            "latest_average": 58.0,
+            "previous_average": 52.0,
+            "change_percent": 11.54,
+            "score": 61.53846153846154,
+            "points": 12
+          }
+        ],
+        "formula": "Mean across valid keywords of clamp(50 + percentage change, 0, 100). Compare the latest floor(N/4) points with the preceding floor(N/4). Minimum 4 points. A zero baseline maps zero interest to 50 and positive interest to 100."
+      },
+      "competition_gap": {
+        "count": 6,
+        "median_reviews": 104.5,
+        "coordinate_count": 6,
+        "formula": "100 \u00d7 (1 \u2212 (0.65 \u00d7 count/20 + 0.35 \u00d7 min(log10(median reviews + 1)/4, 1))). Empty results use 50. Coordinates describe location, but are not included in this formula; one result page is not a market census."
+      },
+      "unmet_need": {
+        "sample_size": 24,
+        "negative_reviews": 12,
+        "repeated_topic_mentions": 15,
+        "topics": {
+          "Pricing and hidden fees": [
+            "expensive",
+            "hidden fee",
+            "overpriced",
+            "pricing",
+            "extra charge"
+          ],
+          "Service and staff": [
+            "rude",
+            "staff",
+            "unhelpful",
+            "service",
+            "response"
+          ],
+          "Availability and capacity": [
+            "unavailable",
+            "fully booked",
+            "capacity",
+            "no desks",
+            "waiting"
+          ],
+          "Access, transport and parking": [
+            "parking",
+            "transport",
+            "commute",
+            "access"
+          ],
+          "Quality and reliability": [
+            "internet",
+            "wifi",
+            "wi-fi",
+            "unreliable",
+            "broken",
+            "outage"
+          ],
+          "Cleanliness and maintenance": [
+            "dirty",
+            "cleanliness",
+            "maintenance",
+            "toilet",
+            "unclean"
+          ],
+          "Contracts and flexibility": [
+            "contract",
+            "deposit",
+            "refund",
+            "lock-in",
+            "cancellation"
+          ],
+          "Noise and crowding": [
+            "noisy",
+            "noise",
+            "crowded",
+            "loud",
+            "overcrowded"
+          ]
+        },
+        "formula": "0.60 \u00d7 negative share \u00d7 100 + 0.40 \u00d7 min(repeated topic mentions / 8 \u00d7 100, 100). Negative ratings: 1\u20133. Repeated means the topic appears at 2+ competitors. Each review can mention multiple topics; Other is never rewarded. Any review request failure uses neutral 50."
+      },
+      "market_momentum": {
+        "positive_words": [
+          "expansion",
+          "opening",
+          "investment",
+          "funding",
+          "partnership",
+          "growing",
+          "demand"
+        ],
+        "negative_words": [
+          "closure",
+          "shutdown",
+          "layoffs",
+          "decline",
+          "loss",
+          "bankruptcy",
+          "regulation",
+          "ban"
+        ],
+        "formula": "50 + 50 \u00d7 sum(direction \u00d7 recency weight)/sum(weights). Positive-only = +1, negative-only = \u22121, both/neither = 0. Weight = 1/(1 + age in days/30); unknown or future date = 0.25. No articles = 50. Keyword matches are heuristic, not factual sentiment judgments."
+      },
+      "advertising_gap": {
+        "active_advertisers": 1,
+        "formula": "0 matched active advertisers = neutral 50; 1 = 65; 2 = 45; 3+ = 25. Active means last shown within 30 days. Recency adjustment is 0 in v1.0. Matches require exact normalized advertiser name or corroborated domain. Scope is worldwide, not city-level ad spend."
+      }
+    },
+    "confidence_points": {
+      "maps": 25,
+      "reviews": 25,
+      "trends": 20,
+      "news": 15,
+      "ads": 15
+    },
+    "confidence_rule": "Completeness only: Maps valid 25; 18+ reviews and all review requests succeed 25; valid Trends 20; 5+ dated articles within 90 days 15; matched active ads and all ad requests succeed 15. High \u226580, Medium \u226550, Low <50.",
+    "reference_date": "2026-10-03T00:09:53.709452+00:00"
+  },
+  "sections": {
+    "maps": {
+      "status": "complete",
+      "count": 6
+    },
+    "reviews": {
+      "status": "complete",
+      "count": 24
+    },
+    "trends": {
+      "status": "complete",
+      "count": 12
+    },
+    "news": {
+      "status": "complete",
+      "count": 5
+    },
+    "ads": {
+      "status": "complete",
+      "count": 1
+    }
+  },
+  "data_mode": "fixture",
+  "created_at": "2026-10-03T00:09:53.666115+00:00"
+}

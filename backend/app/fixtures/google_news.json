@@ -1,0 +1,49 @@
+{
+  "news_results": [
+    {
+      "title": "Sample: flexible office expansion announced",
+      "source": {
+        "name": "Synthetic fixture"
+      },
+      "link": "https://example.com/sample-news-0",
+      "iso_date": "2026-09-27T08:00:00Z",
+      "snippet": "Illustrative test article. This is not a real market event."
+    },
+    {
+      "title": "Sample: coworking investment planned",
+      "source": {
+        "name": "Synthetic fixture"
+      },
+      "link": "https://example.com/sample-news-1",
+      "iso_date": "2026-09-26T08:00:00Z",
+      "snippet": "Illustrative test article. This is not a real market event."
+    },
+    {
+      "title": "Sample: new business partnership",
+      "source": {
+        "name": "Synthetic fixture"
+      },
+      "link": "https://example.com/sample-news-2",
+      "iso_date": "2026-09-25T08:00:00Z",
+      "snippet": "Illustrative test article. This is not a real market event."
+    },
+    {
+      "title": "Sample: office sector faces decline",
+      "source": {
+        "name": "Synthetic fixture"
+      },
+      "link": "https://example.com/sample-news-3",
+      "iso_date": "2026-09-24T08:00:00Z",
+      "snippet": "Illustrative test article. This is not a real market event."
+    },
+    {
+      "title": "Sample: local workplace survey published",
+      "source": {
+        "name": "Synthetic fixture"
+      },
+      "link": "https://example.com/sample-news-4",
+      "iso_date": "2026-09-23T08:00:00Z",
+      "snippet": "Illustrative test article. This is not a real market event."
+    }
+  ]
+}

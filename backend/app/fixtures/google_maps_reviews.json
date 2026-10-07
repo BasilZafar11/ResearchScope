@@ -1,0 +1,61 @@
+{
+  "serpapi_pagination": {"next_page_token": "synthetic-history-page"},
+  "reviews": [
+    {
+      "rating": 2,
+      "snippet": "The internet was unreliable and parking was difficult.",
+      "iso_date": "2026-09-25T12:00:00Z",
+      "link": null,
+      "likes": 0
+    },
+    {
+      "rating": 3,
+      "snippet": "Pricing includes an expensive hidden fee.",
+      "iso_date": "2026-09-24T12:00:00Z",
+      "link": null,
+      "likes": 1
+    },
+    {
+      "rating": 2,
+      "snippet": "The contract deposit refund was slow.",
+      "iso_date": "2026-09-23T12:00:00Z",
+      "link": null,
+      "likes": 2
+    },
+    {
+      "rating": 3,
+      "snippet": "Very noisy and crowded in the afternoon.",
+      "iso_date": "2026-09-22T12:00:00Z",
+      "link": null,
+      "likes": 3
+    },
+    {
+      "rating": 5,
+      "snippet": "Comfortable desk and a helpful team.",
+      "iso_date": "2026-09-21T12:00:00Z",
+      "link": null,
+      "likes": 4
+    },
+    {
+      "rating": 4,
+      "snippet": "A pleasant place to focus.",
+      "iso_date": "2026-09-20T12:00:00Z",
+      "link": null,
+      "likes": 5
+    },
+    {
+      "rating": 5,
+      "snippet": "Good meeting rooms.",
+      "iso_date": "2026-09-19T12:00:00Z",
+      "link": null,
+      "likes": 6
+    },
+    {
+      "rating": 4,
+      "snippet": "Easy to arrange a visit.",
+      "iso_date": "2026-09-18T12:00:00Z",
+      "link": null,
+      "likes": 7
+    }
+  ]
+}
