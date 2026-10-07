@@ -133,3 +133,50 @@ async def discovery(query: str = Query(min_length=3, max_length=400),source_type
     return {'query': query, 'provider': 'Crossref', 'checked_at': datetime.now(timezone.utc).isoformat(),
             'items': [work_summary(item) for item in message.get('items', [])],
             'coverage': 'Crossref metadata search; language metadata may be absent. Results require relevance review.'}
+
+
+async def europe_pmc(doi):
+    key=('europe-pmc',doi)
+    cached=_cache.get(key)
+    if cached and time.monotonic()-cached[0]<3600:return cached[1]
+    async with _slots:
+        try:
+            async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
+                response=await client.get('https://www.ebi.ac.uk/europepmc/webservices/rest/search',
+                                          params={'query':'DOI:"'+doi+'"','format':'json','resultType':'core','pageSize':10})
+                response.raise_for_status()
+                result=response.json()['resultList']['result']
+                if not isinstance(result,list):raise ValueError()
+        except (httpx.HTTPError,KeyError,ValueError,TypeError):
+            raise HTTPException(502,'Europe PMC access metadata is unavailable.')
+    _cache[key]=(time.monotonic(),result)
+    while len(_cache)>256:_cache.popitem(last=False)
+    return result
+
+
+@router.get('/access')
+async def access_metadata(doi:str=Query(min_length=7,max_length=300)):
+    doi=normalize_doi(doi)
+    results=await asyncio.gather(crossref('/works/'+quote(doi,safe='')),europe_pmc(doi),return_exceptions=True)
+    candidates=[];failures=[];metadata=None
+    registry,repository=results
+    if isinstance(registry,Exception):failures.append('Crossref metadata unavailable')
+    else:
+        metadata=work_summary(registry)
+        for link in registry.get('link') or []:
+            url=link.get('URL','')
+            if url.startswith(('https://','http://')):candidates.append({'url':url,'provider':'Crossref','format':link.get('content-type','unknown'),
+                                                                      'version':link.get('content-version','unknown'),'license':'not established for this link','availability':'candidate; may require access rights'})
+    if isinstance(repository,Exception):failures.append('Europe PMC metadata unavailable')
+    else:
+        for item in repository:
+            if str(item.get('doi','')).lower()!=doi:continue
+            for link in (item.get('fullTextUrlList') or {}).get('fullTextUrl',[]):
+                url=link.get('url','')
+                if link.get('availabilityCode')=='OA' and url.startswith(('http://','https://')):
+                    candidates.append({'url':url,'provider':'Europe PMC','format':link.get('documentStyle','unknown'),
+                                       'version':'unknown','license':item.get('license') or 'not supplied',
+                                       'availability':'provider reports open access; original page not inspected'})
+    unique={item['url']:item for item in candidates}
+    return {'doi':doi,'work':metadata,'candidates':list(unique.values()),'failures':failures,'checked_at':datetime.now(timezone.utc).isoformat(),
+            'coverage':'Crossref and Europe PMC metadata only. No copies are downloaded; verify identity, access, and license on the original host.'}
