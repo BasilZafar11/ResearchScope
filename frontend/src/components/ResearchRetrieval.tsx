@@ -1,4 +1,4 @@
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
 import type {Evidence} from '../types/novelty';
 import {useLocalRecords} from '../lib/useLocalRecords';
@@ -9,9 +9,10 @@ const schema=z.object({id:z.string(),query:z.string(),intent:z.string(),sourceTy
 export function retrievedEvidence(id:string):Evidence[]{try{const rounds=z.array(schema).parse(JSON.parse(localStorage.getItem('research-integrity-'+id+'-retrieval')||'[]'));const sources=new Map<string,Evidence>();for(const round of rounds)for(const item of round.items)if(round.selected.includes(item.doi))sources.set(item.doi.toLowerCase(),{id:'doi:'+item.doi.toLowerCase(),source_type:'scholar',title:item.title,summary_text:item.abstract,source_url:item.url,publication_date:item.date,authors:item.authors,similarity_score:0,details:{doi:item.doi,sourceType:item.type,provider:'Crossref',retrievedAt:round.at,query:round.query,relations:item.relations,fullTextLinks:item.links,licenses:item.licenses,review:'selected by researcher; not scored'}});return [...sources.values()];}catch{return [];}}
 export function ResearchRetrieval({id,idea}:{id:string;idea:string}){
   const local=useLocalRecords('research-integrity-'+id+'-retrieval',schema);
-  const records={...local,save:(next:z.infer<typeof schema>[])=>{const success=local.save(next);if(success)window.dispatchEvent(new Event('research-workspace-applied'));return success;}};
+  const records={...local,save:(next:z.infer<typeof schema>[])=>{const success=local.save(next);if(success)window.dispatchEvent(new Event('research-evidence-updated'));return success;}};
   const [intent,setIntent]=useState('combination overlap'),[query,setQuery]=useState(idea),[sourceType,setSourceType]=useState('all'),[afterYear,setAfterYear]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const abort=useRef<AbortController|null>(null);
+  useEffect(()=>()=>abort.current?.abort(),[]);
   async function search(){setBusy(true);setError('');const controller=new AbortController();abort.current=controller;try{
     if(query.trim().length<3||query.length>400)throw new Error('Enter a query between 3 and 400 characters.');
     if(afterYear&&(!/^\d{4}$/.test(afterYear)||Number(afterYear)<1800||Number(afterYear)>2099))throw new Error('Enter a year from 1800 through 2099.');

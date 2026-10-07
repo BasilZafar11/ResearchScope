@@ -83,11 +83,13 @@ def save_state(report_id:UUID,data:StatePatch,x_review_token:str|None=Header(def
             for key in ('defense:evidence-snapshots',):
                 if key in data.records and not isinstance(data.records[key],list):
                     raise HTTPException(422,'Evidence snapshots must be a list of immutable records.')
-                if key in data.records and isinstance(previous.get(key),list):
-                    old={x['id']:x for x in previous[key] if isinstance(x,dict) and 'id' in x}
+                if key in data.records:
+                    old={x['id']:x for x in previous.get(key,[]) if isinstance(x,dict) and 'id' in x}
+                    identifiers=set()
                     for item in data.records[key] if isinstance(data.records[key],list) else []:
-                        if not isinstance(item,dict) or not isinstance(item.get('id'),str):
+                        if not isinstance(item,dict) or not isinstance(item.get('id'),str) or not item['id'] or item['id'] in identifiers:
                             raise HTTPException(422,'Every evidence snapshot needs a stable identifier.')
+                        identifiers.add(item['id'])
                         if item.get('id') in old and item!=old[item['id']]:
                             raise HTTPException(422,'Existing evidence snapshots are immutable. Save a new snapshot instead.')
             changed=[key for key in set(previous)|set(merged) if previous.get(key)!=merged.get(key) or (key in previous)!=(key in merged)]

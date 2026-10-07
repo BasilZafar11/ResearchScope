@@ -19,6 +19,8 @@ function EvidenceCard({item}: {item:Evidence}){return <article className="eviden
 
 export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:string;reportBase?:string}){const {id=''}=useParams();const sample=id==='sample';const query=useQuery({queryKey:['novelty-report',id],queryFn:()=>sample?noveltyApi.sample():noveltyApi.report(id),refetchInterval:q=>!q.state.data||isJob(q.state.data as NoveltyReport|Job)?1800:false});
  const [recordRevision,setRecordRevision]=useState(0);
+ const [,setEvidenceRevision]=useState(0);
+ useEffect(()=>{const update=()=>setEvidenceRevision(value=>value+1);window.addEventListener('research-evidence-updated',update);return()=>window.removeEventListener('research-evidence-updated',update);},[]);
  useEffect(()=>{const update=()=>setRecordRevision(value=>value+1);window.addEventListener('research-workspace-applied',update);return()=>window.removeEventListener('research-workspace-applied',update);},[]);
  if(query.isPending)return <div className="wrap status-page"><p className="kicker">Opening evidence report</p><p role="status">Loading…</p></div>;
  if(query.isError)return <div className="wrap status-page"><p className="kicker">Report unavailable</p><h1>We couldn’t open this report.</h1><p>{query.error instanceof Error?query.error.message:'The report may have expired or its link may be incomplete.'}</p><Link className="primary-button inline-button" to={homePath}>Start a new search</Link></div>;
@@ -45,7 +47,7 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
   <NoveltyWorkspace report={r} id={id} reportBase={reportBase}/>
   <ResearchWorkspaceSync key={id} report={r} id={id}/>
   <ResearchProjectTransfer key={'transfer-'+id} report={r} id={id}/>
-  <ResearchRetrieval key={'retrieval-'+id} id={id} idea={r.input.title}/>
+  <ResearchRetrieval key={'retrieval-'+id+recordRevision} id={id} idea={r.input.title}/>
   <ResearchToolkit key={id+recordRevision} report={r} id={id}/>
   <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab key={id+recordRevision} report={researchReport} id={id}/></Suspense>
   <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab key={id+recordRevision} report={researchReport} id={id}/></Suspense>

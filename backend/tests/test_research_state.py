@@ -50,3 +50,12 @@ def test_expired_workspaces_and_unknown_namespaces_are_rejected():
     with pytest.raises(HTTPException) as failure:get_state(identifier,'owner')
     assert failure.value.status_code==404
     with pytest.raises(ValidationError):StatePatch(expected_version=0,records={'owner-token':'private'})
+
+
+def test_first_snapshot_requires_unique_stable_identifiers():
+    identifier=saved_report()
+    for snapshots in [[{'title':'missing id'}],[{'id':'same'},{'id':'same'}]]:
+        with pytest.raises(HTTPException) as failure:
+            save_state(identifier,StatePatch(expected_version=0,records={'defense:evidence-snapshots':snapshots}),'owner')
+        assert failure.value.status_code==422
+    assert get_state(identifier,'owner')['version']==0
