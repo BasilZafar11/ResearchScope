@@ -1,0 +1,21 @@
+import {useState} from 'react';
+import type {NoveltyReport} from '../types/novelty';
+import type {ProjectRecords} from '../lib/projectRecords';
+import {applyProjectRecords,collectProjectRecords,validateProjectRecords} from '../lib/projectRecords';
+import {downloadFile} from '../lib/researchIntegrity';
+
+type Bundle={format:'researchscope-project-v1';reportId:string;title:string;exportedAt:string;report?:NoveltyReport;records:ProjectRecords};
+export function ResearchProjectTransfer({report,id}:{report:NoveltyReport;id:string}){
+  const [notebook,setNotebook]=useState(false),[pending,setPending]=useState<Bundle|null>(null),[allowDifferent,setAllowDifferent]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+  function exportProject(){try{const bundle:Bundle={format:'researchscope-project-v1',reportId:id,title:report.input.title,exportedAt:new Date().toISOString(),report,records:collectProjectRecords(id,notebook)};downloadFile('researchscope-project-'+id+'.json',JSON.stringify(bundle,null,2));setMessage('Export includes the report, source provenance, and selected local research records. Capability tokens are excluded.');}catch(e){setError(e instanceof Error?e.message:'Could not export browser records.');}}
+  async function inspect(file?:File){if(!file)return;setError('');setPending(null);setAllowDifferent(false);try{if(file.size>2_000_000)throw new Error('Choose a project file smaller than 2 MB.');const value=JSON.parse(await file.text());if(value.format!=='researchscope-project-v1'||typeof value.reportId!=='string'||typeof value.title!=='string')throw new Error('This is not a supported ResearchScope project export.');validateProjectRecords(value.records);setPending(value);}catch(e){setError(e instanceof Error?e.message:'Could not read project file.');}}
+  function apply(){if(!pending)return;try{localStorage.setItem('researchscope-backup-'+id,JSON.stringify(collectProjectRecords(id,notebook)));applyProjectRecords(id,pending.records,notebook);setPending(null);setMessage('Imported research records into this report. Its original source report and scores were not replaced.');}catch(e){setError(e instanceof Error?e.message:'Import failed. Existing browser records were retained where storage allowed rollback.');}}
+  function backup(){try{const raw=localStorage.getItem('researchscope-backup-'+id);if(!raw)throw new Error('No pre-transfer backup is recorded.');downloadFile('researchscope-pre-transfer-backup.json',JSON.stringify({format:'researchscope-project-v1',reportId:id,title:report.input.title,exportedAt:new Date().toISOString(),records:JSON.parse(raw)},null,2));}catch(e){setError(e instanceof Error?e.message:'Could not export backup.');}}
+  return <section className="report-section"><h2>Project export and import</h2><p>Download a portable copy of the report and all saved research assessments. Files may contain private ideas and notes; share them deliberately.</p>
+    <label><input type="checkbox" checked={notebook} onChange={e=>setNotebook(e.target.checked)}/>Include this browser’s shared failure notebook</label>
+    <button className="quiet-button" onClick={exportProject}>Export complete project</button><button className="quiet-button" onClick={backup}>Export pre-transfer backup</button>
+    <label>Inspect an exported project<input type="file" accept=".json,application/json" onChange={e=>{void inspect(e.target.files?.[0]);e.target.value='';}}/></label>
+    {pending&&<div className="tool-result"><strong>{pending.title}</strong><p>Exported {pending.exportedAt} · {Object.keys(pending.records).length} record groups</p><ul>{Object.keys(pending.records).map(key=><li key={key}>{key}</li>)}</ul>{pending.reportId!==id&&<label><input type="checkbox" checked={allowDifferent} onChange={e=>setAllowDifferent(e.target.checked)}/>Apply records from another report; evidence IDs and claim links may need review</label>}<button className="quiet-button" disabled={pending.reportId!==id&&!allowDifferent} onClick={apply}>Apply imported records</button><button className="quiet-button" onClick={()=>setPending(null)}>Cancel import</button></div>}
+    {message&&<p role="status">{message}</p>}{error&&<p role="alert" className="error">{error}</p>}
+  </section>;
+}

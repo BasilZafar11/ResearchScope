@@ -6,6 +6,7 @@ import type {Evidence,Job,NoveltyReport} from '../types/novelty';
 import {NoveltyWorkspace} from '../components/NoveltyWorkspace';
 import {ResearchToolkit} from '../components/ResearchToolkit';
 import {ResearchWorkspaceSync} from '../components/ResearchWorkspaceSync';
+import {ResearchProjectTransfer} from '../components/ResearchProjectTransfer';
 const ResearchDefenseLab=lazy(()=>import('../components/ResearchDefenseLab').then(module=>({default:module.ResearchDefenseLab})));
 const ResearchIntegrityLab=lazy(()=>import('../components/ResearchIntegrityLab').then(module=>({default:module.ResearchIntegrityLab})));
 
@@ -37,6 +38,7 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
   {r.ai_analysis.claim_explanations?.length||r.ai_analysis.areas_needing_deeper_search?.length||r.ai_analysis.executive_summary?<section className="report-section"><div className="section-head"><div><p className="kicker">Optional AI notes</p><h2>Evidence explanation</h2></div><p>AI text explains saved evidence; it does not assign scores.</p></div><p className="ai-note">{r.ai_analysis.executive_summary}</p>{r.ai_analysis.claim_explanations?.map((x,i)=><article className="ai-explanation" key={`${x.claim_id}-${i}`}><strong>{r.claims.find(c=>c.id===x.claim_id)?.text||'Research claim'} · {x.assessment}</strong><p>{x.explanation}</p>{x.limitations.length>0&&<small>Limits: {x.limitations.join(' · ')}</small>}</article>)}{r.ai_analysis.areas_needing_deeper_search?.map((x,i)=><article className="ai-explanation" key={`deeper-${i}`}><strong>Search further: {r.claims.find(c=>c.id===x.claim_id)?.text||'Research claim'}</strong><p>{x.reason}</p>{x.suggested_queries.map((q,j)=><code className="suggested-query" key={j}>{q}</code>)}</article>)}</section>:null}
   <NoveltyWorkspace report={r} id={id} reportBase={reportBase}/>
   <ResearchWorkspaceSync key={id} report={r} id={id}/>
+  <ResearchProjectTransfer key={'transfer-'+id} report={r} id={id}/>
   <ResearchToolkit key={id+recordRevision} report={r} id={id}/>
   <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab key={id+recordRevision} report={r} id={id}/></Suspense>
   <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab key={id+recordRevision} report={r} id={id}/></Suspense>
