@@ -3,7 +3,7 @@ import type {Evidence,NoveltyReport} from '../types/novelty';
 import {collectProjectRecords} from '../lib/projectRecords';
 import type {ProjectRecords} from '../lib/projectRecords';
 type Availability='before cutoff'|'after cutoff'|'date uncertain'|'undated';
-type SnapshotSource={id:string;identity:string;title:string;sourceType:string;url:string|null;abstract:string;publicationDate:string|null;priorityDate:string|null;similarity:number};
+type SnapshotSource={id:string;identity:string;title:string;sourceType:string;url:string|null;abstract:string;publicationDate:string|null;priorityDate:string|null;similarity:number;record?:Evidence};
 type Snapshot={id:string;createdAt:string;cutoff:string;reportTitle:string;reportId:string;overlapScore:number;methodologyVersion:string;queries:NoveltyReport['queries'];included:SnapshotSource[];uncertain:SnapshotSource[];undated:SnapshotSource[];excluded?:SnapshotSource[];assessments?:ProjectRecords};
 export function classifyEvidenceDate(value?:string,cutoff=''):Availability{
  if(!value)return 'undated';const yearMonthDay=value.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);if(!yearMonthDay)return 'date uncertain';
@@ -20,7 +20,7 @@ export function EvidenceCutoffSnapshots({reportId,report,evidence}:{reportId:str
  const key='novelty-defense-'+reportId+'-evidence-snapshots';const [snapshots,setSnapshots]=useState(()=>read(key));const [cutoff,setCutoff]=useState(new Date().toISOString().slice(0,10));const [left,setLeft]=useState(''),[right,setRight]=useState('');const [error,setError]=useState('');
  const classified=useMemo(()=>evidence.map(item=>({item,availability:classifyEvidenceDate(item.publication_date,cutoff)})),[evidence,cutoff]);
  const included=classified.filter(row=>row.availability==='before cutoff');const uncertain=classified.filter(row=>row.availability==='date uncertain');const undated=classified.filter(row=>row.availability==='undated');const after=classified.filter(row=>row.availability==='after cutoff');
- const toSource=({item}:typeof classified[number]):SnapshotSource=>({id:item.id,identity:identity(item),title:item.title,sourceType:item.source_type,url:item.source_url||item.pdf_url||null,abstract:item.summary_text,publicationDate:item.publication_date||null,priorityDate:item.priority_date||null,similarity:item.similarity_score});
+ const toSource=({item}:typeof classified[number]):SnapshotSource=>({id:item.id,identity:identity(item),title:item.title,sourceType:item.source_type,url:item.source_url||item.pdf_url||null,abstract:item.summary_text,publicationDate:item.publication_date||null,priorityDate:item.priority_date||null,similarity:item.similarity_score,record:JSON.parse(JSON.stringify(item))});
  const saveSnapshot=()=>{
   if(snapshots.length>=10){setError('Export and remove an older snapshot before adding another; existing snapshots were retained.');return;}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(cutoff)||classifyEvidenceDate(cutoff,cutoff)!=='before cutoff'){setError('Choose a valid cutoff date.');return;}

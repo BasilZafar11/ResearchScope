@@ -17,7 +17,7 @@ from app.analysis import groq_enrichment
 from app.analysis.research_guidance import build_guidance
 
 STOP = set('a an and are as at be been by for from in into is it of on or that the their this to was were with'.split())
-DISCLAIMER = 'NoveltyMap provides search assistance. It does not determine legal patentability, guarantee scientific novelty, or replace professional literature review or patent counsel.'
+DISCLAIMER = 'ResearchScope provides search assistance. It does not determine legal patentability, guarantee scientific novelty, or replace professional literature review or patent counsel.'
 
 
 class ProviderAuthError(Exception): pass
