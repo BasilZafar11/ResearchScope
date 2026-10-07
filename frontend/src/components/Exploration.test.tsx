@@ -1,0 +1,81 @@
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
+import {polygonArea,insidePolygon,areaSummary,outcome,type Point} from '../lib/exploration';
+import {ValidationLab} from './ValidationLab';
+import {DecisionJournal} from './DecisionJournal';
+import {ConceptSandbox} from './ConceptSandbox';
+import {OpportunityStress} from './OpportunityStress';
+import type {Report} from '../types/analysis';
+import fixture from '../fixtures/report.json';
+const report=fixture as Report;
+beforeEach(()=>{const store=new Map();vi.stubGlobal('localStorage',{getItem:(k:string)=>store.get(k)||null,setItem:(k:string,v:string)=>store.set(k,v)})});
+afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
+it('checks polygon geometry, boundary membership and missing coordinates',()=>{
+ const box:Point[]=[[0,0],[0,.01],[.01,.01],[.01,0]];
+ expect(polygonArea(box)).toBeCloseTo(1.236,2);
+ expect(insidePolygon([.005,.005],box)).toBe(true);
+ expect(insidePolygon([0,0],box)).toBe(true);
+ expect(insidePolygon([.02,.005],box)).toBe(false);
+ expect(polygonArea([[0,0],[.01,.01],[0,.01],[.01,0]])).toBeNull();
+ expect(polygonArea([[0,0],[0,1],[1,1]])).toBeNull();
+ expect(polygonArea([[0,0],[0,0],[.01,.01]])).toBeNull();
+ const summary=areaSummary(box,[{...report.competitors[0],latitude:.005,longitude:.005},{...report.competitors[1],latitude:null,longitude:null}]);
+ expect(summary.members).toHaveLength(1);expect(summary.missing).toBe(1);
+});
+it('evaluates a fixed success rate only after the response target is reached',()=>{
+ expect(outcome(10,6,9,9)).toBe('Still collecting responses');
+ expect(outcome(10,6,20,11)).toBe('Success criterion not met');
+ expect(outcome(10,6,20,12)).toBe('Success criterion met');
+});
+it('saves experiments, rejects impossible counts and restores results after reload',()=>{
+ const view=render(<ValidationLab report={report}/>);
+ fireEvent.change(screen.getByLabelText('Customer segment'),{target:{value:'Local freelancers'}});
+ fireEvent.click(screen.getByText('Create experiment'));
+ fireEvent.click(screen.getByText(/Customers have a recurring problem/, {selector:'summary'}));
+ fireEvent.change(screen.getByLabelText('Total responses'),{target:{value:'10'}});
+ fireEvent.change(screen.getByLabelText('Supporting responses'),{target:{value:'11'}});
+ fireEvent.click(screen.getByText('Save experiment results'));
+ expect(screen.getByText(/supporting responses cannot exceed total/)).toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText('Supporting responses'),{target:{value:'6'}});
+ fireEvent.click(screen.getByText('Save experiment results'));view.unmount();
+ render(<ValidationLab report={report}/>);
+ expect(screen.getByText('Saved outcome: Success criterion met')).toBeInTheDocument();
+});
+it('preserves original journal expectations while saving a later review',()=>{
+ const view=render(<DecisionJournal report={report}/>);
+ for(const [label,value] of [['Decision','Run an evening pilot'],['Assumptions to revisit','Customers need evening access'],['Outcome metric and unit','Trial customers'],['Expected outcome','20'],['Review date','2026-11-05']])fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.click(screen.getByText('Record decision'));
+ fireEvent.click(screen.getByText(/Run an evening pilot/, {selector:'summary'}));
+ fireEvent.change(screen.getByLabelText('Actual result (optional)'),{target:{value:'12'}});
+ fireEvent.change(screen.getByLabelText('Assumption verdict'),{target:{value:'Mixed'}});
+ fireEvent.change(screen.getByLabelText('Which assumptions held up?'),{target:{value:'Interest was real but willingness to pay was weaker.'}});
+ fireEvent.click(screen.getByText('Save decision review'));view.unmount();render(<DecisionJournal report={report}/>);
+ expect(screen.getByText('Expected Trial customers: 20')).toBeInTheDocument();
+ expect(screen.getByText(/Saved actual: 12 · difference: -8/)).toBeInTheDocument();
+ expect(screen.getByText('Run an evening pilot · Mixed')).toBeInTheDocument();
+});
+it('keeps unsaved form data when browser storage fails',()=>{
+ vi.stubGlobal('localStorage',{getItem:()=>null,setItem:()=>{throw Error('full')}});
+ render(<ValidationLab report={report}/>);
+ fireEvent.change(screen.getByLabelText('Customer segment'),{target:{value:'Local freelancers'}});
+ fireEvent.click(screen.getByText('Create experiment'));
+ expect(screen.getByText(/Could not save. Check values/)).toBeInTheDocument();
+ expect(screen.getByLabelText('Customer segment')).toHaveValue('Local freelancers');
+ expect(screen.getByText('No experiments saved yet.')).toBeInTheDocument();
+});
+it('shows contradictory concept evidence and honest missing topics',()=>{
+ const review={competitor:'Test place',rating:5,text:'Affordable pricing',published_at:null,source_url:null};
+ render(<ConceptSandbox report={{...report,review_matrix:[{competitor:'Test place',data_id:null,sample_size:1,topics:{Pricing:{positive:[review],negative:[]}}}]}}/>);
+ fireEvent.click(screen.getByLabelText('Affordable pricing'));
+ expect(screen.getByText('0 mentions in low-rated reviews · 1 in highly rated reviews · 1 sampled businesses.')).toBeInTheDocument();
+ fireEvent.click(screen.getByLabelText('Responsive service'));
+ expect(screen.getByText(/No matching evidence is stored/)).toBeInTheDocument();
+});
+it('requests stress scenarios only after explicit interaction and handles failure',async()=>{
+ const fetch=vi.fn().mockResolvedValue({ok:false,json:async()=>({error:{message:'Report unavailable',code:'NOT_FOUND'}})});vi.stubGlobal('fetch',fetch);
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><OpportunityStress report={report}/></QueryClientProvider>);
+ expect(fetch).not.toHaveBeenCalled();fireEvent.click(screen.getByText('Run stress test'));
+ await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Report unavailable'));
+ expect(fetch.mock.calls[0][0]).toContain('/stress');expect(fetch).toHaveBeenCalledTimes(1);
+});
