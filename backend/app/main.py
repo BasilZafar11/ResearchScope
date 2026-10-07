@@ -38,6 +38,7 @@ from app.analysis.novelty import cosine, safe_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.venture_api import router as venture_router
 from app.integrity_api import router as integrity_router
+from app.research_state_api import router as research_state_router
 
 
 def error(status, code, message, details=None):
@@ -172,6 +173,7 @@ async def lifespan(app):
 app = FastAPI(title='ResearchScope · Research evidence workspace', lifespan=lifespan)
 app.include_router(venture_router)
 app.include_router(integrity_router)
+app.include_router(research_state_router)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type','X-Review-Token'])
 hits = defaultdict(deque)
 salt = secrets.token_bytes(32)
@@ -185,7 +187,7 @@ async def headers(request, call_next):
         body = bytearray()
         async for chunk in request.stream():
             body.extend(chunk)
-            limit = 5_000_000 if request.url.path.endswith('/document-review') else 16384
+            limit = 5_000_000 if request.url.path.endswith('/document-review') else 1_600_000 if request.url.path.endswith('/research-state') else 16384
             if len(body) > limit:
                 return error(413, 'REQUEST_TOO_LARGE', 'Request is too large.')
         request._body = bytes(body)
@@ -201,7 +203,7 @@ async def validation_error(request, exc):
 
 @app.exception_handler(HTTPException)
 async def http_error(request, exc):
-    message = exc.detail if request.url.path.startswith(('/api/venture/', '/api/research-integrity/')) and isinstance(exc.detail,str) else 'The requested route or method is unavailable.'
+    message = exc.detail if (request.url.path.startswith(('/api/venture/', '/api/research-integrity/')) or request.url.path.endswith('/research-state')) and isinstance(exc.detail,str) else 'The requested route or method is unavailable.'
     return error(exc.status_code, 'HTTP_ERROR', message)
 
 

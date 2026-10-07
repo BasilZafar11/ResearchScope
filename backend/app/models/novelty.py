@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, JSON, String, Text, Integer
+from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -60,3 +60,12 @@ class NoveltyWorkspace(Base):
     watched: Mapped[bool] = mapped_column(Boolean, default=False)
     latest_report_id: Mapped[str | None] = mapped_column(id_type)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ResearchState(Base):
+    __tablename__ = 'research_states'
+    report_id: Mapped[str] = mapped_column(id_type, ForeignKey('novelty_reports.id', ondelete='CASCADE'), primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, default=0)
+    records: Mapped[dict] = mapped_column(json_type, default=dict)
+    history: Mapped[list] = mapped_column(json_type, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
