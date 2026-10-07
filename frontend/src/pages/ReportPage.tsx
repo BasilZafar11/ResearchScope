@@ -7,6 +7,8 @@ import {NoveltyWorkspace} from '../components/NoveltyWorkspace';
 import {ResearchToolkit} from '../components/ResearchToolkit';
 import {ResearchWorkspaceSync} from '../components/ResearchWorkspaceSync';
 import {ResearchProjectTransfer} from '../components/ResearchProjectTransfer';
+import {ResearchRetrieval,retrievedEvidence} from '../components/ResearchRetrieval';
+import {selectedDiscoveryEvidence} from '../components/integrity/MultilingualDiscovery';
 const ResearchDefenseLab=lazy(()=>import('../components/ResearchDefenseLab').then(module=>({default:module.ResearchDefenseLab})));
 const ResearchIntegrityLab=lazy(()=>import('../components/ResearchIntegrityLab').then(module=>({default:module.ResearchIntegrityLab})));
 
@@ -23,6 +25,10 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
  const result=query.data as NoveltyReport|Job;
  if(isJob(result)){if(result.status==='failed')return <div className="wrap status-page"><p className="kicker">Search stopped</p><h1>The report could not be completed.</h1><p>{result.error_message}</p><Link to={reportBase+'/sample'}>Open the prepared sample</Link></div>;return <div className="wrap progress-page"><Link to={homePath} className="back-link">← New search</Link><p className="kicker">Building your report</p><h1>Searching the research landscape</h1><p>Retrieved results will be compared against each claim. Source failures remain visible in the completed report.</p><div className="progress-track"><span style={{width:`${result.progress}%`}}/></div><div className="progress-label"><strong>{result.stage.replaceAll('_',' ')}</strong><span>{result.progress}%</span></div><p className="hint">This page updates automatically while the search runs.</p></div>}
  const r=result;
+ const additional=[...retrievedEvidence(id),...selectedDiscoveryEvidence(id)];
+ const sourceIds=new Set(r.papers.map(source=>String(source.details?.doi||source.details?.DOI||source.source_url||source.id).replace(/^https?:\/\/doi.org\//i,'').toLowerCase()));
+ const unique=new Map(additional.filter(source=>!sourceIds.has(String(source.details?.doi).toLowerCase())).map(source=>[source.id,source]));
+ const researchReport={...r,papers:[...r.papers,...unique.values()]};
  return <div className="wrap report-page">
   <Link to={homePath} className="back-link">← New search</Link>
   {r.sample_mode&&<div className="sample-banner"><strong>Illustrative sample</strong><span>The evidence below is fictional and exists only to demonstrate the report. No provider search was run.</span></div>}
@@ -39,9 +45,10 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
   <NoveltyWorkspace report={r} id={id} reportBase={reportBase}/>
   <ResearchWorkspaceSync key={id} report={r} id={id}/>
   <ResearchProjectTransfer key={'transfer-'+id} report={r} id={id}/>
+  <ResearchRetrieval key={'retrieval-'+id} id={id} idea={r.input.title}/>
   <ResearchToolkit key={id+recordRevision} report={r} id={id}/>
-  <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab key={id+recordRevision} report={r} id={id}/></Suspense>
-  <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab key={id+recordRevision} report={r} id={id}/></Suspense>
+  <Suspense fallback={<section className="report-section" role="status">Loading research tools…</section>}><ResearchDefenseLab key={id+recordRevision} report={researchReport} id={id}/></Suspense>
+  <Suspense fallback={<section className="report-section" role="status">Loading integrity tools…</section>}><ResearchIntegrityLab key={id+recordRevision} report={researchReport} id={id}/></Suspense>
   <section className="report-section"><div className="section-head"><div><p className="kicker">Reproducibility</p><h2>Searches and scoring</h2></div></div><details open><summary>Exact searches used</summary><ul className="query-list">{r.queries.map((q,i)=><li key={i}><span>{q.engine}</span><code>{q.query}</code></li>)}</ul></details><div className="method-grid"><div><h3>Overlap formula</h3><code>0.50 × top match + 0.30 × mean top five + 0.20 × high-match breadth</code></div><div><h3>Per-record similarity</h3><code>0.60 × TF-IDF + 0.25 × claim coverage + 0.15 × phrase coverage</code></div><div><h3>Limits</h3><p>Search results are incomplete, text similarity is not a legal or scientific judgment, and weak results may reflect query coverage or inaccessible sources.</p></div></div>{r.warnings.map((w,i)=><p key={i} className="warning-line">{w}</p>)}{r.ai_analysis.warnings.map((w,i)=><p key={`ai-${i}`} className="warning-line">{w}</p>)}</section>
   <div className="report-end"><span>Methodology {r.methodology_version} · {r.credential_mode} mode</span><Link to={homePath}>Search another idea</Link></div>
  </div>

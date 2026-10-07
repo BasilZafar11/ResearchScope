@@ -70,7 +70,9 @@ async def crossref(path: str, params=None):
 
 
 def work_summary(item):
-    parts = item.get('published', {}).get('date-parts', [[]])[0]
+    published=item.get('published') or {}
+    date_parts=published.get('date-parts') or [[]]
+    parts=date_parts[0] if date_parts else []
     return {
         'doi': item.get('DOI', ''), 'title': ' '.join(item.get('title', [])),
         'url': 'https://doi.org/' + quote(item.get('DOI', ''), safe='/'),
@@ -78,6 +80,9 @@ def work_summary(item):
         'language': item.get('language', ''), 'type': item.get('type', ''),
         'abstract': re.sub(r'<[^>]*>', '', item.get('abstract', ''))[:12000],
         'authors': [' '.join(filter(None, [a.get('given'), a.get('family')])) for a in item.get('author', [])],
+        'relations':item.get('relation') or {},
+        'links':item.get('link') or [],
+        'licenses':item.get('license') or [],
     }
 
 
@@ -116,8 +121,15 @@ async def publication_updates(doi: str = Query(min_length=7, max_length=300)):
 
 
 @router.get('/discovery')
-async def discovery(query: str = Query(min_length=3, max_length=400)):
-    message = await crossref('/works', {'query.bibliographic': query, 'rows': 15})
+async def discovery(query: str = Query(min_length=3, max_length=400),source_type:str=Query(default='all'),after_year:int|None=Query(default=None,ge=1800,le=2099)):
+    allowed={'all','dissertation','posted-content','report','standard','journal-article'}
+    if source_type not in allowed:raise HTTPException(422,'This source type is not supported by Crossref.')
+    filters=[]
+    if source_type!='all':filters.append('type:'+source_type)
+    if after_year is not None:filters.append('from-pub-date:'+str(after_year+1)+'-01-01')
+    params={'query.bibliographic':query,'rows':15}
+    if filters:params['filter']=','.join(filters)
+    message = await crossref('/works',params)
     return {'query': query, 'provider': 'Crossref', 'checked_at': datetime.now(timezone.utc).isoformat(),
             'items': [work_summary(item) for item in message.get('items', [])],
             'coverage': 'Crossref metadata search; language metadata may be absent. Results require relevance review.'}
