@@ -81,10 +81,14 @@ def save_state(report_id:UUID,data:StatePatch,x_review_token:str|None=Header(def
             if len(merged)>100 or len(json.dumps(merged,allow_nan=False))>1_500_000:
                 raise HTTPException(422,'The complete workspace exceeds its storage limit. Export or remove records.')
             for key in ('defense:evidence-snapshots',):
+                if key in data.records and not isinstance(data.records[key],list):
+                    raise HTTPException(422,'Evidence snapshots must be a list of immutable records.')
                 if key in data.records and isinstance(previous.get(key),list):
                     old={x['id']:x for x in previous[key] if isinstance(x,dict) and 'id' in x}
                     for item in data.records[key] if isinstance(data.records[key],list) else []:
-                        if isinstance(item,dict) and item.get('id') in old and item!=old[item['id']]:
+                        if not isinstance(item,dict) or not isinstance(item.get('id'),str):
+                            raise HTTPException(422,'Every evidence snapshot needs a stable identifier.')
+                        if item.get('id') in old and item!=old[item['id']]:
                             raise HTTPException(422,'Existing evidence snapshots are immutable. Save a new snapshot instead.')
             changed=[key for key in set(previous)|set(merged) if previous.get(key)!=merged.get(key) or (key in previous)!=(key in merged)]
             history=list(row.history if row else [])
