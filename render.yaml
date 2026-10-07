@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ventureatlas-api
+    name: researchscope-api
     plan: free
     runtime: docker
     dockerContext: ./backend
@@ -31,7 +31,7 @@ services:
       - key: CORS_ORIGINS
         sync: false
   - type: web
-    name: ventureatlas-web
+    name: researchscope-web
     runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
