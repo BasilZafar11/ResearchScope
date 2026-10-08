@@ -236,6 +236,8 @@ def provider_search(client, engine, **params):
     message=str(result.get('error') or '').casefold()
     if any(word in message for word in ('api key','unauthorized','authentication')): raise ProviderAuthError()
     if any(word in message for word in ('quota','rate limit','credits','searches left','run out')): raise ProviderCapacityError()
+    if engine == 'google_patents' and message == "google patents hasn't returned any results for this query.":
+        return {**{key: value for key, value in result.items() if key != 'error'}, 'organic_results': []}
     if message: raise ProviderUnavailableError()
     return result
 

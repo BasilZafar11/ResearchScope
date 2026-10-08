@@ -1,4 +1,4 @@
-from app.analysis.novelty import cosine, score_report, dedupe, safe_url
+from app.analysis.novelty import cosine, score_report, dedupe, safe_url, provider_search, ProviderUnavailableError
 from app.analysis import groq_enrichment
 from app.main import sample_novelty_report, sample_revision_preview, RevisionInput
 from app.analysis.research_guidance import build_guidance, contribution_brief
@@ -14,6 +14,23 @@ from app.main import extract_document_review
 from pypdf import PdfWriter
 from io import BytesIO
 import pytest
+
+
+def test_patent_no_results_response_is_an_empty_search():
+    client = SimpleNamespace(search=lambda params: {
+        'error': "Google Patents hasn't returned any results for this query.",
+        'search_metadata': {'status': 'Success'},
+    })
+    result = provider_search(client, 'google_patents', q='bounded research query')
+    assert result['organic_results'] == []
+    assert result['search_metadata']['status'] == 'Success'
+    assert 'error' not in result
+
+
+def test_patent_provider_failure_still_reports_unavailability():
+    client = SimpleNamespace(search=lambda params: {'error': 'Google Patents search failed.'})
+    with pytest.raises(ProviderUnavailableError):
+        provider_search(client, 'google_patents', q='bounded research query')
 
 
 def test_sample_report_is_explicitly_synthetic_and_needs_no_provider():
