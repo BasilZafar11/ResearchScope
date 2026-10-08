@@ -1,12 +1,12 @@
 import {useState} from 'react';
-import {useSearchParams} from 'react-router-dom';
+import {useSearchParams,useLocation,useNavigate} from 'react-router-dom';
 import type {Evidence} from '../../types/novelty';
 import {EvidenceDetail} from './EvidenceDetail';
 
 type Decision={state:string;reason:string};
 function read<T>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return fallback;}}
 export function EvidenceBrowser({evidence,originalIds,id}:{evidence:Evidence[];originalIds:Set<string>;id:string}){
-  const [params,setParams]=useSearchParams();const [screening,setScreening]=useState<Record<string,Decision>>(()=>read(`novelty-tools-${id}-screening`,{}));const [queue,setQueue]=useState<string[]>(()=>read(`novelty-tools-${id}-queue`,[]));const [message,setMessage]=useState('');
+  const [params]=useSearchParams();const navigate=useNavigate(),location=useLocation();function setParams(next:URLSearchParams,options:{replace?:boolean}={}){navigate({search:'?'+next.toString(),hash:location.hash},options);}const [screening,setScreening]=useState<Record<string,Decision>>(()=>read(`novelty-tools-${id}-screening`,{}));const [queue,setQueue]=useState<string[]>(()=>read(`novelty-tools-${id}-queue`,[]));const [message,setMessage]=useState('');
   const term=params.get('q')||'',type=params.get('type')||'all',sort=params.get('sort')||'match',state=params.get('screen')||'all',from=params.get('from')||'',to=params.get('to')||'';
   function change(key:string,value:string){const next=new URLSearchParams(params);value?next.set(key,value):next.delete(key);next.delete('page');setParams(next,{replace:true});}
   const year=(item:Evidence)=>Number((item.publication_date||item.priority_date||'').slice(0,4));

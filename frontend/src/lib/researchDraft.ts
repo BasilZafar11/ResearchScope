@@ -19,3 +19,6 @@ export function useResearchDraft<T>(scope:string,field:string,initial:T|(()=>T))
   return [value,update];
 }
 export function deleteResearchDrafts(scope:string){const keys=Object.keys(localStorage).filter(key=>key.startsWith(prefix+scope+':'));keys.forEach(key=>localStorage.removeItem(key));}
+
+const memory=new Map<string,unknown>();
+export function useMemoryDraft<T>(key:string,initial:T):[T,Dispatch<SetStateAction<T>>]{const [value,setValue]=useState<T>(()=>memory.has(key)?memory.get(key) as T:initial);return [value,next=>setValue(previous=>{const result=typeof next==='function'?(next as (value:T)=>T)(previous):next;memory.set(key,result);return result;})];}

@@ -1,3 +1,4 @@
+import {useMemoryDraft} from '../lib/researchDraft';
 import {useMemo,useState} from 'react';
 import {nearTextFindings,temporalFindings} from '../lib/datasetAudit';
 type CsvData={headers:string[];rows:string[][]};
@@ -39,12 +40,12 @@ const saveCsv=(findings:Finding[])=>{
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='dataset-leakage-findings.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 
-export function DatasetLeakageAudit(){
- const [data,setData]=useState<CsvData|null>(null),[fileName,setFileName]=useState(''),[error,setError]=useState('');
- const [splitColumn,setSplitColumn]=useState(''),[sampleColumn,setSampleColumn]=useState(''),[subjectColumn,setSubjectColumn]=useState(''),[hashColumn,setHashColumn]=useState('');
- const [train,setTrain]=useState(''),[validation,setValidation]=useState(''),[test,setTest]=useState('');
- const [timeColumn,setTimeColumn]=useState(''),[strictTime,setStrictTime]=useState(true),[textColumn,setTextColumn]=useState(''),[nearEnabled,setNearEnabled]=useState(false);
- const [labelColumn,setLabelColumn]=useState(''),[predictors,setPredictors]=useState<string[]>([]),[preprocessing,setPreprocessing]=useState('unknown');
+export function DatasetLeakageAudit({reportId='local'}:{reportId?:string}){
+ const [data,setData]=useMemoryDraft<CsvData|null>(reportId+':dataset-data',null),[fileName,setFileName]=useMemoryDraft(reportId+':dataset-fileName',''),[error,setError]=useState('');
+ const [splitColumn,setSplitColumn]=useMemoryDraft(reportId+':dataset-splitColumn',''),[sampleColumn,setSampleColumn]=useMemoryDraft(reportId+':dataset-sampleColumn',''),[subjectColumn,setSubjectColumn]=useMemoryDraft(reportId+':dataset-subjectColumn',''),[hashColumn,setHashColumn]=useMemoryDraft(reportId+':dataset-hashColumn','');
+ const [train,setTrain]=useMemoryDraft(reportId+':dataset-train',''),[validation,setValidation]=useMemoryDraft(reportId+':dataset-validation',''),[test,setTest]=useMemoryDraft(reportId+':dataset-test','');
+ const [timeColumn,setTimeColumn]=useMemoryDraft(reportId+':dataset-timeColumn',''),[strictTime,setStrictTime]=useMemoryDraft(reportId+':dataset-strictTime',true),[textColumn,setTextColumn]=useMemoryDraft(reportId+':dataset-textColumn',''),[nearEnabled,setNearEnabled]=useMemoryDraft(reportId+':dataset-nearEnabled',false);
+ const [labelColumn,setLabelColumn]=useMemoryDraft(reportId+':dataset-labelColumn',''),[predictors,setPredictors]=useMemoryDraft<string[]>(reportId+':dataset-predictors',[]),[preprocessing,setPreprocessing]=useMemoryDraft(reportId+':dataset-preprocessing','unknown');
  const splitValues=useMemo(()=>{const index=data?.headers.indexOf(splitColumn)??-1;return index<0?[]:[...new Set(data!.rows.map(row=>row[index]).filter(Boolean))].sort()},[data,splitColumn]);
  const findings=useMemo(()=>{
   if(!data||!splitColumn)return [] as Finding[];
@@ -62,6 +63,7 @@ export function DatasetLeakageAudit(){
  const overlapCount=findings.filter(item=>item.kind.includes('shared across splits')).length;
  const auditReady=Boolean(data&&splitColumn&&train&&test&&train!==test&&(!validation||validation!==train&&validation!==test)&&(sampleColumn||subjectColumn||hashColumn||timeColumn||labelColumn||nearEnabled&&textColumn||preprocessing!=='unknown'));
  return <>
+<p className="hint">Uploaded manifests stay in memory for this visit. Reloading requires choosing the file again; no manifest data is saved in browser storage.</p><button className="quiet-button" onClick={()=>{setData(null);setFileName('');}}>Clear loaded manifest</button>
   <p>Upload a CSV manifest to compare explicit split labels. The file and row values stay in this browser session. Results are cleared when the page reloads; export them yourself if you need a record.</p>
   <label>CSV manifest<input type="file" accept=".csv,text/csv" onChange={event=>void onFile(event.target.files?.[0])}/></label>
   {fileName&&data&&<p>{fileName} · {data.rows.length.toLocaleString()} rows · {data.headers.length} columns</p>}

@@ -43,7 +43,7 @@ export function ResearchDefenseLab({report,id,tool}:{report:NoveltyReport;id:str
 
   <Feature n={5} title="Outdated baseline detector"><OutdatedBaselineDetector reportId={id} papers={report.papers} idea={report.input.title+" "+report.input.abstract}/></Feature>
 
-  <Feature n={6} title="Dataset leakage audit"><DatasetLeakageAudit/></Feature>
+  <Feature n={6} title="Dataset leakage audit"><DatasetLeakageAudit reportId={id}/></Feature>
 
   <Feature n={7} title="Benchmark contamination check"><BenchmarkContaminationTracker reportId={id} idea={report.input.title}/></Feature>
 

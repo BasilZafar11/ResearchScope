@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useState} from 'react';
 import type {Evidence} from '../types/novelty';
 type State='missing'|'partial'|'satisfied'|'not applicable';
@@ -7,7 +8,7 @@ type Saved={guidelineUrl:string;version:string;criteria:Criterion[]};
 function read(key:string):Saved{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value?{guidelineUrl:value.guidelineUrl||'',version:value.version||'',criteria:Array.isArray(value.criteria)?value.criteria:[]}:{guidelineUrl:'',version:'',criteria:[]}}catch{return {guidelineUrl:'',version:'',criteria:[]}}}
 function exportCsv(saved:Saved){const rows=[['criterion','type','status','claim IDs','evidence IDs','task','mapping note','reason','guideline URL','version'],...saved.criteria.map(item=>[item.text,item.kind,item.state,item.claimIds.join('; '),item.evidenceIds.join('; '),item.task,item.note,item.reason,saved.guidelineUrl,saved.version])];const csv=rows.map(row=>row.map(value=>'"'+value.replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='venue-criteria-map.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 export function VenueCriteriaMapper({reportId,claims,evidence}:{reportId:string;claims:{id:string;text:string}[];evidence:Evidence[]}){
- const key='novelty-defense-'+reportId+'-venue-criteria';const [saved,setSaved]=useState(()=>read(key));const [text,setText]=useState(()=>read(key).criteria.map(item=>item.text).join('\n'));const [storageError,setStorageError]=useState(false);
+ const key='novelty-defense-'+reportId+'-venue-criteria';const [saved,setSaved]=useState(()=>read(key));const [text,setText]=useResearchDraft(reportId,'venue-text',()=>read(key).criteria.map(item=>item.text).join('\n'));const [storageError,setStorageError]=useState(false);
  const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const [error,setError]=useState('');
  const [history,setHistory]=useState<{id:string;at:string;map:Saved}[]>(()=>{try{const value=JSON.parse(localStorage.getItem(key+'-history')||'[]');return Array.isArray(value)?value:[];}catch{return [];}});
