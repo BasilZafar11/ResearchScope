@@ -1,3 +1,4 @@
+import {createContext,useContext} from 'react';
 import type {ReactNode} from 'react';
 import {useEffect,useState} from 'react';
 import type {NoveltyReport} from '../types/novelty';
@@ -13,18 +14,20 @@ import {MultilingualDiscovery,selectedDiscoveryEvidence} from './integrity/Multi
 import {SensitiveDataReadiness} from './integrity/SensitiveDataReadiness';
 import '../styles/integrity.css';
 
+const SelectedTool=createContext<number|undefined>(undefined);
 function Feature({number,title,children}:{number:number;title:string;children:ReactNode}) {
-  return <details className="tool-panel integrity-feature"><summary>{String(number).padStart(2,'0')} · {title}</summary><div className="integrity-content">{children}</div></details>;
+  const selected=useContext(SelectedTool);if(selected!==undefined&&selected!==number)return null;
+  return <details open={selected!==undefined} className="tool-panel integrity-feature"><summary>{String(number).padStart(2,'0')} · {title}</summary><div className="integrity-content">{children}</div></details>;
 }
-export function ResearchIntegrityLab({report,id}:{report:NoveltyReport;id:string}) {
+export function ResearchIntegrityLab({report,id,tool}:{report:NoveltyReport;id:string;tool?:number}) {
   const [discovered,setDiscovered]=useState(()=>selectedDiscoveryEvidence(id));
   useEffect(()=>{const update=()=>setDiscovered(selectedDiscoveryEvidence(id));update();window.addEventListener('research-integrity-evidence-update',update);window.addEventListener('storage',update);return()=>{window.removeEventListener('research-integrity-evidence-update',update);window.removeEventListener('storage',update);};},[id]);
   const existing=new Set(report.papers.map(x=>String(x.details?.doi||x.details?.DOI||x.source_url||'').replace(/^https?:\/\/(dx\.)?doi.org\//,'').toLowerCase()));
   const additions=discovered.filter(x=>!existing.has(String(x.details?.doi).toLowerCase()));
   const expanded={...report,papers:[...report.papers,...additions]};
   const evidence=[...expanded.papers,...report.patents,...report.web_results];
-  return <section className="toolkit integrity-lab" key={id}>
-    <header><p className="kicker">Research integrity workspace</p><h2>Check the evidence and prepare a reproducible study</h2><p>Ten tools for source reliability, study design, and responsible data use. Records stay in this browser; export them to share or preserve your work.</p></header>
+  return <SelectedTool.Provider value={tool}><section className="toolkit integrity-lab" key={id}>
+    {tool===undefined&&(<header><p className="kicker">Research integrity workspace</p><h2>Check the evidence and prepare a reproducible study</h2><p>Ten tools for source reliability, study design, and responsible data use. Records stay in this browser; export them to share or preserve your work.</p></header>)}
     {additions.length>0&&<p>{additions.length} selected discovery sources are available in these tools. They have not been included in the original report’s overlap score.</p>}
     <Feature number={1} title="Retraction and correction alerts"><PublicationAlerts report={expanded} id={id}/></Feature>
     <Feature number={2} title="Contradictory evidence explorer"><ContradictoryEvidence report={expanded} id={id}/></Feature>
@@ -36,5 +39,5 @@ export function ResearchIntegrityLab({report,id}:{report:NoveltyReport;id:string
     <Feature number={8} title="Evidence extraction reconciliation"><ExtractionReconciliation evidence={evidence} id={id}/></Feature>
     <Feature number={9} title="Multilingual prior-work discovery"><MultilingualDiscovery id={id} idea={report.input.title}/></Feature>
     <Feature number={10} title="Sensitive-data research readiness"><SensitiveDataReadiness id={id}/></Feature>
-  </section>;
+  </section></SelectedTool.Provider>;
 }

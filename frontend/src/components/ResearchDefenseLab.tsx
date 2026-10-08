@@ -1,4 +1,5 @@
 import {useMemo} from 'react';
+import {createContext,useContext} from 'react';
 import type {ReactNode} from 'react';
 import type {NoveltyReport} from '../types/novelty';
 import {CombinationOverlapAudit} from './CombinationOverlapAudit';
@@ -24,12 +25,13 @@ import {ProceedDecisionGate} from './ProceedDecisionGate';
 
 const componentsDefault=(r:NoveltyReport)=>r.input.keywords.slice(0,4).join('\n');
 
-function Feature({n,title,children}: {n:number;title:string;children:ReactNode}){return <details className="tool-panel defense-feature" onToggle={()=>window.dispatchEvent(new Event('research-defense-refresh'))}><summary>{String(n).padStart(2,'0')} · {title}</summary>{children}</details>}
+const SelectedTool=createContext<number|undefined>(undefined);
+function Feature({n,title,children}: {n:number;title:string;children:ReactNode}){const selected=useContext(SelectedTool);if(selected!==undefined&&selected!==n)return null;return <details open={selected!==undefined} className="tool-panel defense-feature" onToggle={()=>window.dispatchEvent(new Event('research-defense-refresh'))}><summary>{String(n).padStart(2,'0')} · {title}</summary>{children}</details>}
 
-export function ResearchDefenseLab({report,id}:{report:NoveltyReport;id:string}){
+export function ResearchDefenseLab({report,id,tool}:{report:NoveltyReport;id:string;tool?:number}){
  const allEvidence=useMemo(()=>[...report.papers,...report.patents,...report.web_results],[report]);
 
- return <section className="toolkit defense-lab"><header><p className="kicker">Research Defense Lab</p><h2>Test whether the contribution is clear, fair, and feasible</h2><p>Twenty structured checks for the hardest decisions in a research project. User judgments stay labeled as judgments; text matches remain search signals.</p></header>
+ return <SelectedTool.Provider value={tool}><section className="toolkit defense-lab">{tool===undefined&&(<header><p className="kicker">Research Defense Lab</p><h2>Test whether the contribution is clear, fair, and feasible</h2><p>Twenty structured checks for the hardest decisions in a research project. User judgments stay labeled as judgments; text matches remain search signals.</p></header>)}
 
   <Feature n={1} title="Combination overlap audit"><CombinationOverlapAudit reportId={id} initialComponents={componentsDefault(report)} evidence={[...report.papers,...report.patents,...report.web_results]}/></Feature>
 
@@ -70,5 +72,5 @@ export function ResearchDefenseLab({report,id}:{report:NoveltyReport;id:string})
   <Feature n={19} title="Research task ownership board"><ResearchTaskBoard reportId={id} claims={report.claims.map(claim=>({id:claim.id,text:claim.text}))} evidence={[...report.papers,...report.patents,...report.web_results]}/></Feature>
 
   <Feature n={20} title="Proceed, revise, or pause gate"><ProceedDecisionGate reportId={id}/></Feature>
- </section>
+ </section></SelectedTool.Provider>
 }
