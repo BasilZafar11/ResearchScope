@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
 import type {Evidence} from '../../types/novelty';
@@ -10,8 +11,8 @@ type Extraction=z.infer<typeof extraction>;
 const blank=():Extraction=>({reviewer:'',finding:'',population:'',method:'',limitations:'',passage:'',location:''});
 export function ExtractionReconciliation({evidence,id}:{evidence:Evidence[];id:string}) {
   const records=useLocalRecords('research-integrity-'+id+'-extractions',schema);
-  const [sourceId,setSourceId]=useState(''),[pairId,setPairId]=useState(''),[draft,setDraft]=useState(blank),[error,setError]=useState('');
-  const [resolution,setResolution]=useState({interpretation:'',reason:'',resolver:''}),[resolveId,setResolveId]=useState('');
+  const [sourceId,setSourceId]=useResearchDraft(id,'integrity-ExtractionReconciliation-sourceId',''),[pairId,setPairId]=useResearchDraft(id,'integrity-ExtractionReconciliation-pairId',''),[draft,setDraft]=useResearchDraft(id,'integrity-ExtractionReconciliation-draft',blank),[error,setError]=useState('');
+  const [resolution,setResolution]=useResearchDraft(id,'integrity-ExtractionReconciliation-resolution',{interpretation:'',reason:'',resolver:''}),[resolveId,setResolveId]=useResearchDraft(id,'integrity-ExtractionReconciliation-resolveId','');
   const awaiting=records.items.filter(x=>!x.second);
   function submit(){
     if(!draft.reviewer.trim()||!draft.finding.trim()||!draft.passage.trim()){setError('Enter reviewer name, finding, and source passage.');return;}

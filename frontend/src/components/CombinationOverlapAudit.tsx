@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
 
@@ -28,7 +29,7 @@ export function CombinationOverlapAudit({reportId,initialComponents,evidence}:{r
  const [priorSources,setPriorSources]=useState(()=>readPriorSources(reportId));
  const [storageError,setStorageError]=useState(false);
  const [sourceError,setSourceError]=useState('');
- const [sourceDraft,setSourceDraft]=useState({title:'',url:'',excerpt:''});
+ const [sourceDraft,setSourceDraft]=useResearchDraft(reportId,'CombinationOverlapAudit-sourceDraft',{title:'',url:'',excerpt:''});
  const components=[...new Set(audit.components.split('\n').map(value=>value.trim()).filter(Boolean))].slice(0,8);
  const sourceEvidence=useMemo(()=>[...evidence,...priorSources.map(source=>({id:source.id,source_type:'web' as const,title:source.title,source_url:source.url||null,pdf_url:null,summary_text:source.excerpt,similarity_score:0})),...audit.manualSources.map(source=>({id:source.id,source_type:'web' as const,title:source.title,source_url:source.url||null,pdf_url:null,summary_text:source.excerpt,similarity_score:0}))],[evidence,priorSources,audit.manualSources]);
  useEffect(()=>{const listener=(event:Event)=>{const value=(event as CustomEvent<PriorSource[]>).detail||[];setPriorSources(value.map(item=>({id:'prior:'+item.id,title:item.title,url:item.url||'',excerpt:item.excerpt||''})))};window.addEventListener('research-prior-work-update',listener);return()=>window.removeEventListener('research-prior-work-update',listener)},[]);

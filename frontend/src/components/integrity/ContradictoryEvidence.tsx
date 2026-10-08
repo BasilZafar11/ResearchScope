@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
 import type {NoveltyReport} from '../../types/novelty';
@@ -9,7 +10,7 @@ type Finding=z.infer<typeof schema>;
 const blank=()=>({claimId:'',sourceId:'',direction:'unclear' as Finding['direction'],passage:'',population:'',method:'',setting:'',quality:'',limitations:'',page:''});
 export function ContradictoryEvidence({report,id}:{report:NoveltyReport;id:string}) {
   const records=useLocalRecords('research-integrity-'+id+'-contradictions',schema);
-  const [draft,setDraft]=useState(blank),[filter,setFilter]=useState(''),[error,setError]=useState('');
+  const [draft,setDraft]=useResearchDraft(id,'integrity-ContradictoryEvidence-draft',blank),[filter,setFilter]=useState(''),[error,setError]=useState('');
   const evidence=[...report.papers,...report.patents,...report.web_results];
   function add(){if(!draft.claimId||!draft.sourceId||!draft.passage.trim()){setError('Choose a claim and source and paste a supporting passage.');return;}
     if(records.save([...records.items,{...draft,...stamp()}])){setDraft(blank());setError('');}}

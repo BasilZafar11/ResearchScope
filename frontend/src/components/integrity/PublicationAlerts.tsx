@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
 import type {NoveltyReport} from '../../types/novelty';
@@ -21,7 +22,7 @@ function affectedLocalRecords(id:string,sourceId:string) {
 
 export function PublicationAlerts({report,id}:{report:NoveltyReport;id:string}) {
   const saved=useDraft('research-integrity-'+id+'-updates',schema,{});
-  const [sourceId,setSourceId]=useState(report.papers[0]?.id||''),[doi,setDoi]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [sourceId,setSourceId]=useResearchDraft(id,'integrity-PublicationAlerts-sourceId',report.papers[0]?.id||''),[doi,setDoi]=useResearchDraft(id,'integrity-PublicationAlerts-doi',''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [,refresh]=useState(0);
   const source=report.papers.find(x=>x.id===sourceId);
   const inferred=source?doiFrom(String(source.details?.doi||source.details?.DOI||source.source_url||'')):'';

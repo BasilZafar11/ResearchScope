@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
 import type {Evidence} from '../../types/novelty';
@@ -10,7 +11,7 @@ type Artifact=z.infer<typeof schema>;
 const blank=()=>({sourceId:'',kind:'code' as Artifact['kind'],url:'',version:'',license:'',status:'unchecked' as Artifact['status'],checkedAt:'',reason:'',execution:''});
 export function ArtifactAudit({evidence,id}:{evidence:Evidence[];id:string}) {
   const records=useLocalRecords('research-integrity-'+id+'-artifacts',schema);
-  const [draft,setDraft]=useState(blank),[error,setError]=useState('');
+  const [draft,setDraft]=useResearchDraft(id,'integrity-ArtifactAudit-draft',blank),[error,setError]=useState('');
   function add(){if(!draft.sourceId){setError('Select a source.');return;}
     if(draft.url&&!safeHttp(draft.url)){setError('Use an http or https artifact link.');return;}
     if(draft.status!=='unchecked'&&(!draft.checkedAt||!draft.reason.trim()||(['accessible','restricted','broken link'].includes(draft.status)&&!draft.url))){setError('A checked status needs a date, evidence or search reason, and a URL when an artifact was located.');return;}

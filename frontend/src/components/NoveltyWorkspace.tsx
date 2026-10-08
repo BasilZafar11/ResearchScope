@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {noveltyApi} from '../api/novelty';
@@ -10,11 +11,11 @@ function briefText(report:NoveltyReport){const g=report.research_guidance;
 
 export function NoveltyWorkspace({report,id,reportBase='/reports'}: {report:NoveltyReport;id:string;reportBase?:string}){
  const g=report.research_guidance;
- const [revision,setRevision]=useState({title:report.input.title,abstract:report.input.abstract,claims:report.input.claims.join('\n')});
+ const [revision,setRevision]=useResearchDraft(id,'NoveltyWorkspace-revision',{title:report.input.title,abstract:report.input.abstract,claims:report.input.claims.join('\n')});
  const [preview,setPreview]=useState<RevisionPreview|null>(null),[documentReview,setDocumentReview]=useState<DocumentReview|null>(null);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[reviewToken,setReviewToken]=useState(''),[ownerToken,setOwnerToken]=useState(''),[inviteToken,setInviteToken]=useState(''),[reviewError,setReviewError]=useState('');
- const [author,setAuthor]=useState(''),[kind,setKind]=useState('comment'),[claimId,setClaimId]=useState(''),[comment,setComment]=useState(''),[sourceUrl,setSourceUrl]=useState('');
- const [brief,setBrief]=useState(''),[busy,setBusy]=useState(''),[message,setMessage]=useState(''),[refreshId,setRefreshId]=useState('');
+ const [author,setAuthor]=useResearchDraft(id,'NoveltyWorkspace-author',''),[kind,setKind]=useResearchDraft(id,'NoveltyWorkspace-kind','comment'),[claimId,setClaimId]=useResearchDraft(id,'NoveltyWorkspace-claimId',''),[comment,setComment]=useResearchDraft(id,'NoveltyWorkspace-comment',''),[sourceUrl,setSourceUrl]=useResearchDraft(id,'NoveltyWorkspace-sourceUrl','');
+ const [brief,setBrief]=useResearchDraft(id,'NoveltyWorkspace-brief',''),[busy,setBusy]=useState(''),[message,setMessage]=useState(''),[refreshId,setRefreshId]=useState('');
  useEffect(()=>{if(report.sample_mode||!report.saved||report.is_public)return;
   const hash=new URLSearchParams(location.hash.slice(1));
   const fromHash=hash.get('review');

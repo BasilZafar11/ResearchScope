@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
 import type {Evidence} from '../../types/novelty';
@@ -10,7 +11,7 @@ type Review=z.infer<typeof schema>;
 const empty=()=>({statement:'',sourceId:'',passage:'',page:'',verdict:'unresolved' as Review['verdict'],reason:'',rewrite:''});
 export function CitationSupport({evidence,id}:{evidence:Evidence[];id:string}) {
   const records=useLocalRecords('research-integrity-'+id+'-citations',schema);
-  const [draft,setDraft]=useState(empty),[error,setError]=useState('');
+  const [draft,setDraft]=useResearchDraft(id,'integrity-CitationSupport-draft',empty),[error,setError]=useState('');
   const diagnostic=citationDiagnostics(draft.statement,draft.passage);
   function add(){if(!draft.statement.trim()||!draft.sourceId||!draft.passage.trim()||!draft.reason.trim()){setError('Provide the sentence, source passage, and a reason for your verdict.');return;}if(records.save([...records.items,{...draft,...stamp()}])){setDraft(empty());setError('');}}
   return <>

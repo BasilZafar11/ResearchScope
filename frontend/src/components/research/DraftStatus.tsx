@@ -1,0 +1,2 @@
+import {useEffect,useState} from 'react';
+export function DraftStatus(){const [message,setMessage]=useState('Drafts stay in this browser. Save records in each tool; use Record to export or publish them.');useEffect(()=>{const update=(event:Event)=>setMessage((event as CustomEvent<string>).detail);window.addEventListener('research-draft-status',update);return()=>window.removeEventListener('research-draft-status',update);},[]);return <p className="draft-status" role="status">{message}</p>;}

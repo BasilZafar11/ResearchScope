@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useMemo,useState} from 'react';
 import type {Evidence,NoveltyReport} from '../types/novelty';
 
@@ -20,18 +21,18 @@ const TERM_MAP:Record<string,string[]>={"machine learning":['statistical learnin
 export function ResearchToolkit({report,id}:{report:NoveltyReport;id:string}){
  const evidence=useMemo(()=>[...report.papers,...report.patents,...report.web_results],[report]);
  const root=`novelty-tools-${id}`;
- const [ideas,setIdeas]=useState('');const [ideaResults,setIdeaResults]=useState<{idea:string;score:number;closest?:Evidence}[]>([]);
- const [weeks,setWeeks]=useState(16),[hours,setHours]=useState(8),[dataAccess,setDataAccess]=useState(false),[equipment,setEquipment]=useState(false),[skills,setSkills]=useState(false);
- const [question,setQuestion]=useState({topic:'',population:'',method:'',outcome:'',context:''});
- const [language,setLanguage]=useState('es'),[translatedQuery,setTranslatedQuery]=useState('');
- const [termQuery,setTermQuery]=useState(report.input.keywords.slice(0,2).join(' '));
+ const [ideas,setIdeas]=useResearchDraft(id,'ResearchToolkit-ideas','');const [ideaResults,setIdeaResults]=useState<{idea:string;score:number;closest?:Evidence}[]>([]);
+ const [weeks,setWeeks]=useResearchDraft(id,'ResearchToolkit-weeks',16),[hours,setHours]=useResearchDraft(id,'ResearchToolkit-hours',8),[dataAccess,setDataAccess]=useResearchDraft(id,'ResearchToolkit-dataAccess',false),[equipment,setEquipment]=useResearchDraft(id,'ResearchToolkit-equipment',false),[skills,setSkills]=useResearchDraft(id,'ResearchToolkit-skills',false);
+ const [question,setQuestion]=useResearchDraft(id,'ResearchToolkit-question',{topic:'',population:'',method:'',outcome:'',context:''});
+ const [language,setLanguage]=useResearchDraft(id,'ResearchToolkit-language','es'),[translatedQuery,setTranslatedQuery]=useResearchDraft(id,'ResearchToolkit-translatedQuery','');
+ const [termQuery,setTermQuery]=useResearchDraft(id,'ResearchToolkit-termQuery',report.input.keywords.slice(0,2).join(' '));
  const [screening,setScreening]=useState<Record<string,{state:string;reason:string}>>(()=>read(`${root}-screening`,{}));
  const [queue,setQueue]=useState<string[]>(()=>read(`${root}-queue`,[]));
  const [checklists,setChecklists]=useState<Record<string,string[]>>(()=>read(`${root}-quality`,{}));
  const [notes,setNotes]=useState<{id:string;text:string;created_at:string;source?:string}[]>(()=>read(`${root}-journal`,[]));
- const [note,setNote]=useState(''),[noteSource,setNoteSource]=useState('');
+ const [note,setNote]=useResearchDraft(id,'ResearchToolkit-note',''),[noteSource,setNoteSource]=useResearchDraft(id,'ResearchToolkit-noteSource','');
  const [exported,setExported]=useState(false);
- const [methodField,setMethodField]=useState(report.input.field||'');
+ const [methodField,setMethodField]=useResearchDraft(id,'ResearchToolkit-methodField',report.input.field||'');
  const candidateIdeas=ideas.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,5);
  const orderedEvidence=[...evidence].sort((a,b)=>Number(queue.includes(b.id))-Number(queue.includes(a.id))||b.similarity_score-a.similarity_score);
  const ideaChecks=()=>{setIdeaResults(candidateIdeas.map(idea=>{const ranked=[...report.papers,...report.patents].map(item=>({item,score:overlap(idea,item.title+' '+item.summary_text)})).sort((a,b)=>b.score-a.score);return {idea,score:ranked.length?Math.round(ranked.slice(0,3).reduce((n,x)=>n+x.score,0)/Math.min(3,ranked.length)):0,closest:ranked[0]?.item}}))};

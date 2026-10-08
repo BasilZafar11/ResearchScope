@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useState} from 'react';
 type Round={id:string;date:string;sourceType:string;query:string;identifiers:string[];notes:string;legacyCount?:number};
 type Saved={rounds:Round[];openGaps:string[];allRequiredTypesSearched:boolean;minimumRounds:number;lowYieldLimit:number};
@@ -5,7 +6,7 @@ const blank=():Saved=>({rounds:[],openGaps:[],allRequiredTypesSearched:false,min
 export function readSearchHistory(key:string):Saved{try{const raw=JSON.parse(localStorage.getItem(key)||'null');if(!raw)return blank();const value=Array.isArray(raw)?{rounds:raw}:raw;return {...blank(),...value,rounds:Array.isArray(value.rounds)?value.rounds.map((round:any)=>({id:round.id||crypto.randomUUID(),date:round.date||round.created||new Date().toISOString(),sourceType:round.sourceType||'Previously recorded round',query:round.query||round.title||'Previous manually recorded count',identifiers:Array.isArray(round.identifiers)?round.identifiers:[],notes:round.notes||'',legacyCount:Array.isArray(round.identifiers)?round.legacyCount:(Number.isFinite(Number(round.data?.new_records))?Number(round.data.new_records):0)})):[]}}catch{return blank()}}
 const normalize=(value:string)=>value.trim().toLocaleLowerCase().replace(/\s+/g,' ');
 export function SearchStoppingAssistant({reportId}:{reportId:string}){
- const key='novelty-defense-'+reportId+'-rounds';const [saved,setSaved]=useState(()=>readSearchHistory(key));const [draft,setDraft]=useState({sourceType:'Academic index',query:'',identifiers:'',notes:''});const [storageError,setStorageError]=useState(false);
+ const key='novelty-defense-'+reportId+'-rounds';const [saved,setSaved]=useState(()=>readSearchHistory(key));const [draft,setDraft]=useResearchDraft(reportId,'SearchStoppingAssistant-draft',{sourceType:'Academic index',query:'',identifiers:'',notes:''});const [storageError,setStorageError]=useState(false);
  const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const allPrevious=new Set<string>();const roundStats=saved.rounds.map(round=>{const ids=[...new Set(round.identifiers.map(normalize).filter(Boolean))];const newIds=ids.filter(id=>!allPrevious.has(id));ids.forEach(id=>allPrevious.add(id));return {round,ids,newIds,count:round.legacyCount??newIds.length}});
  const gaps=saved.openGaps.filter(Boolean);

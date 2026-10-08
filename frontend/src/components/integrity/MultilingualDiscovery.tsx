@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../../lib/researchDraft';
 import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
 import {integrityApi} from '../../api/integrity';
@@ -19,7 +20,7 @@ export function selectedDiscoveryEvidence(id:string):Evidence[] {
 export function MultilingualDiscovery({id,idea}:{id:string;idea:string}) {
   const localRecords=useLocalRecords('research-integrity-'+id+'-multilingual',schema);
   const records={...localRecords,save:(next:z.infer<typeof schema>[])=>{const success=localRecords.save(next);if(success)window.dispatchEvent(new Event('research-integrity-evidence-update'));return success;}};
-  const [original,setOriginal]=useState(idea),[language,setLanguage]=useState('Spanish'),[translated,setTranslated]=useState(''),[translationSource,setTranslationSource]=useState(''),[reviewed,setReviewed]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [original,setOriginal]=useResearchDraft(id,'integrity-MultilingualDiscovery-original',idea),[language,setLanguage]=useResearchDraft(id,'integrity-MultilingualDiscovery-language','Spanish'),[translated,setTranslated]=useResearchDraft(id,'integrity-MultilingualDiscovery-translated',''),[translationSource,setTranslationSource]=useResearchDraft(id,'integrity-MultilingualDiscovery-translationSource',''),[reviewed,setReviewed]=useResearchDraft(id,'integrity-MultilingualDiscovery-reviewed',false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const controller=useRef<AbortController|null>(null);
   useEffect(()=>()=>controller.current?.abort(),[]);
   async function search(){if(!original.trim()||translated.trim().length<3||!translationSource.trim()){setError('Enter the original query, translated query, and who or what supplied the translation.');return;}setBusy(true);setError('');const abort=new AbortController();controller.current=abort;

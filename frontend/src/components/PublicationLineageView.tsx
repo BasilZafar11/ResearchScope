@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
 type Relation='version of'|'extends'|'corrects'|'retracts';
@@ -13,7 +14,7 @@ function readPrior(reportId:string):Evidence[]{try{const items=JSON.parse(localS
 export function PublicationLineageView({reportId,evidence:reportEvidence}:{reportId:string;evidence:Evidence[]}){
  const key='novelty-defense-'+reportId+'-publication-lineage';const [saved,setSaved]=useState(()=>read(key));const [storageError,setStorageError]=useState(false);
  const [priorEvidence,setPriorEvidence]=useState(()=>readPrior(reportId));
- const [manualFrom,setManualFrom]=useState(''),[manualTo,setManualTo]=useState(''),[relation,setRelation]=useState<Relation>('version of'),[reason,setReason]=useState('');
+ const [manualFrom,setManualFrom]=useResearchDraft(reportId,'PublicationLineageView-manualFrom',''),[manualTo,setManualTo]=useResearchDraft(reportId,'PublicationLineageView-manualTo',''),[relation,setRelation]=useResearchDraft<Relation>(reportId,'PublicationLineageView-relation','version of'),[reason,setReason]=useResearchDraft(reportId,'PublicationLineageView-reason','');
  const evidence=useMemo(()=>[...reportEvidence,...priorEvidence],[reportEvidence,priorEvidence]);
  useEffect(()=>{const listener=(event:Event)=>{const detail=(event as CustomEvent<Prior[]>).detail||[];setPriorEvidence(detail.map(item=>({id:'prior:'+item.id,source_type:'web' as const,title:item.title,summary_text:item.excerpt||'',source_url:item.url,publication_date:item.date||undefined,similarity_score:0})))};window.addEventListener('research-prior-work-update',listener);return()=>window.removeEventListener('research-prior-work-update',listener)},[]);
  const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};

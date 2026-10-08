@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useState} from 'react';
 import type {Evidence} from '../types/novelty';
 import {AccessMetadataLookup} from './AccessMetadataLookup';
@@ -7,7 +8,7 @@ type Draft=Omit<Copy,'id'|'checkedAt'|'paperId'>;
 function read(key:string):Copy[]{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
 function doiFrom(item:Evidence){const doi=item.details?.doi;if(typeof doi==='string'&&doi)return doi;const match=(item.source_url||'').match(/doi\.org\/(10\.\d{4,9}\/\S+)/i);return match?.[1]?.replace(/[.)]+$/,'')||''}
 export function FullTextAccessFinder({reportId,papers}:{reportId:string;papers:Evidence[]}){
- const key='novelty-defense-'+reportId+'-full-text-copies';const [copies,setCopies]=useState(()=>read(key));const [paperId,setPaperId]=useState('');const [draft,setDraft]=useState<Draft>({url:'',host:'',version:'author accepted manuscript',license:'',status:'candidate found, unverified',note:''});const [error,setError]=useState(''),[storageError,setStorageError]=useState(false);
+ const key='novelty-defense-'+reportId+'-full-text-copies';const [copies,setCopies]=useState(()=>read(key));const [paperId,setPaperId]=useResearchDraft(reportId,'FullTextAccessFinder-paperId','');const [draft,setDraft]=useResearchDraft<Draft>(reportId,'FullTextAccessFinder-draft',{url:'',host:'',version:'author accepted manuscript',license:'',status:'candidate found, unverified',note:''});const [error,setError]=useState(''),[storageError,setStorageError]=useState(false);
  const paper=papers.find(item=>item.id===paperId);const doi=paper?doiFrom(paper):'';const query=paper?'"'+paper.title+'" author manuscript repository':'';
  const persist=(next:Copy[])=>{setCopies(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const add=()=>{if(!paperId){setError('Select the paper this copy belongs to.');return}if(draft.url.trim()){try{const url=new URL(draft.url);if(!['http:','https:'].includes(url.protocol))throw new Error()}catch{setError('Enter a valid http or https URL, or leave it blank when recording that no copy was found.');return}}if(draft.status!=='no copy found'&&!draft.url.trim()){setError('Enter the candidate link before recording an available copy.');return}persist([{...draft,id:crypto.randomUUID(),paperId,url:draft.url.trim(),checkedAt:new Date().toISOString()},...copies].slice(0,150));setDraft({...draft,url:'',host:'',license:'',note:''});setError('')};
