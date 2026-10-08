@@ -1,0 +1,3 @@
+import type {ReactNode} from 'react';
+import {useSearchParams,useNavigate,useLocation} from 'react-router-dom';
+export function ClaimDisclosure({id,children}:{id:string;children:ReactNode}){const [params]=useSearchParams();const navigate=useNavigate(),location=useLocation();const selected=params.get('claim')===id;return <details className="claim-row" open={selected} onToggle={event=>{const open=event.currentTarget.open;if(open===selected)return;const next=new URLSearchParams(params);if(open)next.set('claim',id);else next.delete('claim');navigate({search:'?'+next.toString(),hash:location.hash},{replace:true});}}>{children}</details>;}
