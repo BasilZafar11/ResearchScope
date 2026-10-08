@@ -1,0 +1,6 @@
+import {useState} from 'react';
+import {Link,useLocation} from 'react-router-dom';
+import {researchTools,type ReportView} from '../../lib/researchToolRegistry';
+import {reportDestination} from './ReportShell';
+
+export function ToolFinder({view}:{view:ReportView}){const [query,setQuery]=useState('');const [all,setAll]=useState(false);const location=useLocation();const tools=researchTools.filter(tool=>(all||query.trim()||tool.view===view)&&tool.title.toLowerCase().includes(query.trim().toLowerCase()));return <section className="tool-finder"><h3>Find a tool</h3><label>Search all 50 research tools<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Try baseline, citation, or experiment"/></label><label className="consent"><input type="checkbox" checked={all} onChange={e=>setAll(e.target.checked)}/>Show tools from every section</label><p role="status">{tools.length} tools{!query&&!all?' in '+view:''}</p><ul>{tools.map(tool=><li key={tool.id}><Link to={{search:reportDestination(location.search,tool.view,tool.id),hash:location.hash}}>{tool.title}<span>{tool.view}</span></Link></li>)}</ul>{!tools.length&&<p>No matching tool. Try a broader term or clear the search.</p>}</section>;}
