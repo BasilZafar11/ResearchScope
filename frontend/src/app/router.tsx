@@ -1,7 +1,10 @@
 import {createBrowserRouter,Link,NavLink,Outlet} from 'react-router-dom';
 import {lazy,Suspense} from 'react';
-import {VentureHome,VentureReport,VentureReports} from '../pages/VenturePages';
-import {CompareReportsPage} from '../pages/CompareReportsPage';
+const VentureHome=lazy(()=>import('../pages/VenturePages').then(m=>({default:m.VentureHome})));
+const VentureReport=lazy(()=>import('../pages/VenturePages').then(m=>({default:m.VentureReport})));
+const VentureReports=lazy(()=>import('../pages/VenturePages').then(m=>({default:m.VentureReports})));
+
+const CompareReportsPage=lazy(()=>import('../pages/CompareReportsPage').then(m=>({default:m.CompareReportsPage})));
 import {PrivateResearchPage} from '../pages/PrivateResearchPage';
 const ResearchPage=lazy(()=>import('../pages/ResearchPage').then(m=>({default:m.ResearchPage})));
 const StrategyPage=lazy(()=>import('../pages/StrategyPage').then(m=>({default:m.StrategyPage})));

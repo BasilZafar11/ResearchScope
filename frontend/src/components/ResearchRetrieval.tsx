@@ -1,3 +1,4 @@
+import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
 import type {Evidence} from '../types/novelty';
@@ -10,7 +11,7 @@ export function retrievedEvidence(id:string):Evidence[]{try{const rounds=z.array
 export function ResearchRetrieval({id,idea}:{id:string;idea:string}){
   const local=useLocalRecords('research-integrity-'+id+'-retrieval',schema);
   const records={...local,save:(next:z.infer<typeof schema>[])=>{const success=local.save(next);if(success)window.dispatchEvent(new Event('research-evidence-updated'));return success;}};
-  const [intent,setIntent]=useState('combination overlap'),[query,setQuery]=useState(idea),[sourceType,setSourceType]=useState('all'),[afterYear,setAfterYear]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [intent,setIntent]=useResearchDraft(id,'retrieval-intent','combination overlap'),[query,setQuery]=useResearchDraft(id,'retrieval-query',idea),[sourceType,setSourceType]=useResearchDraft(id,'retrieval-sourceType','all'),[afterYear,setAfterYear]=useResearchDraft(id,'retrieval-afterYear',''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const abort=useRef<AbortController|null>(null);
   useEffect(()=>()=>abort.current?.abort(),[]);
   async function search(){setBusy(true);setError('');const controller=new AbortController();abort.current=controller;try{

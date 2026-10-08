@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {cleanup,render,screen} from '@testing-library/react';
+import {cleanup,render,screen,fireEvent} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter,Route,Routes} from 'react-router-dom';
 import {ReportPage} from './ReportPage';
@@ -10,8 +10,11 @@ it('labels the sample as fictional and renders transparent scoring sections',asy
  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/reports/sample']}><Routes><Route path="/reports/:id" element={<ReportPage/>}/></Routes></MemoryRouter></QueryClientProvider>);
  expect(await screen.findByText('Illustrative sample')).toBeTruthy();
- expect(screen.getByText(/evidence below is fictional/)).toBeTruthy();
- expect(screen.getByText('Search-based novelty signal')).toBeTruthy();
+ expect(screen.getByText(/evidence is fictional and demonstrates/)).toBeTruthy();
+ expect(screen.queryByText('SYNTHETIC DEMO QUERY')).toBeNull();
+ expect(screen.getByRole('heading',{name:'Overview'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('link',{name:'Record'}));
+ expect(screen.getByText(/Search-based novelty signal:/)).toBeTruthy();
  expect(screen.getByText('Searches and scoring')).toBeTruthy();
  expect(screen.getByText('SYNTHETIC DEMO QUERY')).toBeTruthy();
 });
