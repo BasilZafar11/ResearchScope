@@ -50,7 +50,7 @@ def test_access_metadata_and_form_options_are_validated():
 @pytest.mark.parametrize('url',['javascript:alert(1)','java\tscript:alert(1)','https://example.org/\nsource','/papers/one','//example.org/paper','https://user:secret@example.org/paper','https://@example.org/paper','https:///example.org/paper','https://example.org:99999/paper','https:\\example.org/paper'])
 def test_shared_records_reject_unsafe_source_urls(url):
     records={'integrity:access-paper':{'doi':'10.1234/study','work':{'title':'Study','url':url},'candidates':[],'failures':[],'checked_at':'today','coverage':'Metadata only'}}
-    with pytest.raises(ValidationError,match='source URLs'):
+    with pytest.raises(ValidationError,match='unsupported record structure'):
         StatePatch(expected_version=0,records=records)
 
 

@@ -15,6 +15,6 @@ describe('NoveltyMap home',()=>{
   expect(screen.getByLabelText(/^Abstract/)).toBeTruthy();
   expect(screen.getByLabelText(/^Key claims/)).toBeTruthy();
   expect(screen.getByRole('link',{name:/Open the prepared sample/})).toBeTruthy();
-  expect(screen.getByRole('button',{name:'Search papers and patents'}).hasAttribute('disabled')).toBe(true);
+  expect(screen.getByRole('button',{name:'Search papers and patents'}).hasAttribute('disabled')).toBe(false);
  });
 });
