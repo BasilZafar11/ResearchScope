@@ -9,7 +9,7 @@ import {retrievedEvidence} from '../components/ResearchRetrieval';
 import {selectedDiscoveryEvidence} from '../components/integrity/MultilingualDiscovery';
 
 function isJob(x:NoveltyReport|Job):x is Job{return x.status!=='complete'}
-export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:string;reportBase?:string}){const {id=''}=useParams();const sample=id==='sample';const query=useQuery({queryKey:['novelty-report',id],queryFn:()=>sample?noveltyApi.sample():noveltyApi.report(id),refetchInterval:q=>!q.state.data||isJob(q.state.data as NoveltyReport|Job)?1800:false});
+export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:string;reportBase?:string}){const {id=''}=useParams();const sample=id==='sample';const query=useQuery({queryKey:['novelty-report',id],queryFn:()=>sample?noveltyApi.sample():noveltyApi.report(id),refetchInterval:q=>!q.state.data||['queued','running'].includes((q.state.data as NoveltyReport|Job).status)?1800:false});
  const [recordRevision,setRecordRevision]=useState(0);
  const [,setEvidenceRevision]=useState(0);
  useEffect(()=>{const update=()=>setEvidenceRevision(value=>value+1);window.addEventListener('research-evidence-updated',update);return()=>window.removeEventListener('research-evidence-updated',update);},[]);

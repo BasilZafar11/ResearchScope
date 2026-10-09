@@ -8,11 +8,13 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta, timezone
 from app.db.session import Session
-from app.models.novelty import NoveltyReport
+from app.models.novelty import NoveltyReport, NoveltyWorkspace
 from app.main import create_novelty_workspace, add_novelty_comment, set_novelty_watch, get_novelty_workspace, ReviewCommentInput, WatchInput
 from app.main import extract_document_review
 from pypdf import PdfWriter
 from io import BytesIO
+import asyncio
+import hashlib
 import pytest
 
 
@@ -54,6 +56,12 @@ def test_duplicate_papers_merge_and_tracking_query_keys_are_removed():
     merged=dedupe(records,'scholar')
     assert len(merged)==1
     assert 'utm_source' not in safe_url(records[0]['source_url'])
+
+
+def test_novelty_source_links_drop_provider_archives_and_credential_fragments():
+    assert safe_url('https://serpapi.com/searches/archive.json?api_key=dummy') is None
+    assert safe_url('https://example.org/paper?groq_api_key=dummy&section=2#token=dummy')=='https://example.org/paper?section=2'
+    assert safe_url('java\nscript:alert(1)') is None
 
 
 def test_novelty_input_bounds_and_explicit_public_save():
@@ -115,7 +123,8 @@ def test_review_invite_controls_comments_and_watch_finds_newly_retrieved_records
         db.add(NoveltyReport(id=ident,fingerprint='a'*64,title=baseline['input']['title'],field='',
             input_data=baseline['input'],status='complete',stage='complete',progress=100,saved=True,is_public=False,
             report=baseline,created_at=datetime.now(timezone.utc)-timedelta(hours=2)))
-    created=create_novelty_workspace(UUID(ident))
+        db.add(NoveltyWorkspace(report_id=ident,owner_token_hash=hashlib.sha256(b'owner').hexdigest(),review_token_hash=hashlib.sha256(b'reviewer-token-for-test-only-12345').hexdigest(),comments=[],watched=False))
+    created={'owner_token':'owner','review_token':'reviewer-token-for-test-only-12345'}
     token=created['review_token']
     assert len(token)>30
     denied=add_novelty_comment(UUID(ident),ReviewCommentInput(author='Supervisor',kind='challenge',text='Please verify this source.'),SimpleNamespace(headers={}))
@@ -131,19 +140,19 @@ def test_review_invite_controls_comments_and_watch_finds_newly_retrieved_records
         db.add(NoveltyReport(id=str(uuid4()),fingerprint='a'*64,title=baseline['input']['title'],field='',
             input_data=baseline['input'],status='complete',stage='complete',progress=100,saved=True,is_public=False,
             report=next_report,created_at=datetime.now(timezone.utc)))
-    result=get_novelty_workspace(UUID(ident))
+    result=get_novelty_workspace(UUID(ident),request)
     assert result['comments'][0]['author']=='Supervisor'
     assert any(item['title']=='A newly retrieved paper' for item in result['alerts'])
 
 
-def test_pdf_review_does_not_invent_passages_on_blank_page():
+def test_pdf_review_does_not_invent_passages_on_blank_page(monkeypatch):
     writer=PdfWriter();writer.add_blank_page(width=300,height=300)
     stream=BytesIO();writer.write(stream)
     async def body(): return stream.getvalue()
     request=SimpleNamespace(headers={'content-type':'application/pdf'},body=body)
-    coroutine=extract_document_review(request,[{'id':'claim-1','text':'A sufficiently long crop model claim.'}])
-    with pytest.raises(StopIteration) as completed: coroutine.send(None)
-    result=completed.value.value
+    async def extracted(raw):return {'page_count':1,'passages':[]}
+    monkeypatch.setattr('app.main.extract_pdf',extracted)
+    result=asyncio.run(extract_document_review(request,[{'id':'claim-1','text':'A sufficiently long crop model claim.'}]))
     assert result['page_count']==1
     assert result['claims'][0]['passages']==[]
     assert 'not saved' in result['limitation']

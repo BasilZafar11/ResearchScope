@@ -16,8 +16,8 @@ logger = logging.getLogger('market.jobs')
 ENGINES = {'maps': 'google_maps', 'reviews': 'google_maps_reviews', 'trends': 'google_trends', 'news': 'google_news', 'ads': 'google_ads_transparency_center'}
 
 
-async def run_job(analysis_id, request: AnalysisInput):
-    client = SearchClient()
+async def run_job(analysis_id, request: AnalysisInput, credentials=None):
+    client = SearchClient(credentials=credentials)
     sections = {k: {'status': 'pending', 'count': 0} for k in ENGINES}
     warnings = [] if client.live else ['Sample report: all observations are synthetic fixtures, not live market evidence. Fixture data describes only the Pune coworking example.']
 
@@ -197,7 +197,7 @@ async def run_job(analysis_id, request: AnalysisInput):
                             seasonality_series=history, review_matrix=review_matrix(samples), news=articles, advertising=advertising,
                             sampled_reviews=samples, reputation=reputation, search_usage=client.usage(),
                             evidence=evidence, warnings=warnings, methodology_version='1.0', sections=sections,
-                            data_mode='live' if client.live else 'fixture', created_at=row.created_at.replace(tzinfo=row.created_at.tzinfo or now().tzinfo).isoformat()).model_dump()
+                            data_mode='live' if client.live else 'fixture', credential_mode='personal' if credentials else 'hosted', created_at=row.created_at.replace(tzinfo=row.created_at.tzinfo or now().tzinfo).isoformat()).model_dump()
             ids = {}
             for place in places:
                 record = Competitor(id=uid(), analysis_id=analysis_id, serpapi_data_id=place['data_id'], **{k: place[k] for k in ('name', 'business_type', 'address', 'latitude', 'longitude', 'rating', 'review_count', 'price', 'website', 'rank')}, raw_subset={'source_url': place['source_url']})

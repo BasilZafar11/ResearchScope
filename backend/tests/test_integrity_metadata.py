@@ -33,13 +33,45 @@ def test_failed_provider_is_visible_and_not_cached(monkeypatch):
     class Client:
         async def __aenter__(self): return self
         async def __aexit__(self,*args): pass
-        async def get(self,*args,**kwargs): raise httpx.ConnectError('offline')
+        def stream(self,*args,**kwargs): raise httpx.ConnectError('offline')
     monkeypatch.setattr(api.httpx,'AsyncClient',lambda **kwargs:Client())
     api._cache.clear()
     with pytest.raises(HTTPException) as failure:
         asyncio.run(api.crossref('/works/test'))
     assert failure.value.status_code == 502
     assert not api._cache
+
+
+def test_metadata_response_limit_rejects_oversized_decoded_stream():
+    class Response:
+        status_code = 200
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def raise_for_status(self): pass
+        async def aiter_bytes(self):
+            yield b' ' * 700_000
+            yield b' ' * 400_000
+    class Client:
+        def stream(self, *args, **kwargs): return Response()
+    with pytest.raises(ValueError, match='response limit'):
+        asyncio.run(api.bounded_json(Client(), 'https://provider.invalid/metadata'))
+
+
+@pytest.mark.parametrize(('status', 'expected'), [(404, 404), (429, 503)])
+def test_provider_status_preserves_not_found_and_temporary_limit(status, expected):
+    class Response:
+        status_code = status
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def raise_for_status(self): raise AssertionError('Status must be handled before decoding')
+        async def aiter_bytes(self):
+            raise AssertionError('Error body must not be read')
+            yield b''
+    class Client:
+        def stream(self, *args, **kwargs): return Response()
+    with pytest.raises(HTTPException) as failure:
+        asyncio.run(api.bounded_json(Client(), 'https://provider.invalid/metadata'))
+    assert failure.value.status_code == expected
 
 
 def test_metadata_admission_has_a_separate_bounded_client_budget():

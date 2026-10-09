@@ -6,7 +6,8 @@ const file=new File(['%PDF-1.4'],'study.pdf',{type:'application/pdf'});
 it('uses the shared timeout and raw PDF body for document reviews',async()=>{
   const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({page_count:1})});vi.stubGlobal('fetch',fetch);
   expect(await noveltyApi.documentReview('sample',file)).toEqual({page_count:1});
-  expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/sample-report/document-review'),expect.objectContaining({method:'POST',body:file,headers:{'Content-Type':'application/pdf'},signal:expect.any(AbortSignal)}));
+  expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/sample-report/document-review'),expect.objectContaining({method:'POST',body:file,signal:expect.any(AbortSignal)}));
+  expect(new Headers(fetch.mock.calls[0][1].headers).get('Content-Type')).toBe('application/pdf');
 });
 it.each(['TimeoutError','AbortError'])('turns %s into a retryable timeout',async name=>{
   vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new DOMException('aborted',name)));

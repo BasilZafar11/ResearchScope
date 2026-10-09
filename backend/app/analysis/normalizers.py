@@ -9,8 +9,10 @@ from dateutil.parser import parse
 def safe_url(value):
     if not isinstance(value, str):
         return None
+    if value!=value.strip() or re.search(r'[\x00-\x1f\x7f-\x9f\\]',value):return None
     try:
         p = urlsplit(value)
+        p.port
         if p.scheme not in ('https', 'http') or not p.hostname or p.username or p.password:
             return None
         if p.hostname in ('localhost', '127.0.0.1', '::1'):
@@ -24,7 +26,7 @@ def safe_url(value):
         # Provider archive URLs can reveal request credentials. Never retain them.
         if p.hostname.endswith('serpapi.com'):
             return None
-        query = [(k, v) for k, v in parse_qsl(p.query) if not re.search('key|token|secret|auth|signature', k, re.I)]
+        query = [(k, v) for k, v in parse_qsl(p.query) if not re.search('key|token|secret|auth|signature', k, re.I) and not k.lower().startswith('utm_')]
         return urlunsplit((p.scheme, p.netloc, p.path, urlencode(query), ''))
     except ValueError:
         return None

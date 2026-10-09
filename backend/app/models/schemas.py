@@ -120,4 +120,5 @@ class Report(BaseModel):
     methodology: dict
     sections: dict[str, dict]
     data_mode: str
+    credential_mode: str = 'hosted'
     created_at: str

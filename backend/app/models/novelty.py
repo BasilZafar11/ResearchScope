@@ -51,6 +51,12 @@ class NoveltyDailyBudget(Base):
     calls_used: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class GroqDailyBudget(Base):
+    __tablename__ = 'groq_daily_budget'
+    day_utc: Mapped[str] = mapped_column(String(10), primary_key=True)
+    calls_used: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class NoveltyWorkspace(Base):
     __tablename__ = 'novelty_workspaces'
     report_id: Mapped[str] = mapped_column(id_type, primary_key=True)

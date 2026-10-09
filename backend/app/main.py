@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import secrets
@@ -19,6 +20,9 @@ from sqlalchemy import select, text, update, func, desc, delete
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.config import SAVED_REPORT_RETENTION_DAYS, settings
+from app.provider_credentials import credentials_for
+from app.search_budget import hosted_remaining
+from app.pdf_review import extract_pdf, PdfBusy, PdfUnavailable
 from app.db.session import Session, engine
 from app.db.repositories import active, cached
 from app.models.database import Analysis, Signal, now, uid
@@ -28,7 +32,7 @@ from app.analysis.relevance import revise_report
 from app.analysis.stress import stress_test
 from app.models.research import ResearchInput, ENGINES, plan_requests
 from app.analysis.research_runner import run_research
-from app.models.novelty import NoveltyReport, NoveltyUsage, NoveltyDailyBudget
+from app.models.novelty import NoveltyReport, NoveltyUsage, NoveltyDailyBudget, GroqDailyBudget
 from app.models.novelty import NoveltyWorkspace
 from app.analysis.novelty import run_novelty_job, DISCLAIMER
 from app.analysis.novelty import score_report
@@ -68,6 +72,12 @@ def novelty_report_current(row):
     return created>=now()-(timedelta(days=SAVED_REPORT_RETENTION_DAYS) if row.saved else timedelta(hours=1))
 
 
+def cleanup_expired_reports(db):
+    retention=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS);temporary=now()-timedelta(hours=1)
+    db.execute(delete(NoveltyReport).where(((NoveltyReport.saved.is_(True))&(NoveltyReport.created_at<retention))|((NoveltyReport.saved.is_(False))&(NoveltyReport.created_at<temporary))))
+    db.execute(delete(NoveltyWorkspace).where(NoveltyWorkspace.report_id.not_in(select(NoveltyReport.id))))
+
+
 class NoveltyInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     title: str = Field(min_length=5, max_length=160)
@@ -78,7 +88,7 @@ class NoveltyInput(BaseModel):
     earliest_year: int | None = Field(default=None, ge=1800, le=2100)
     known_related_work: list[str] = Field(default_factory=list, max_length=10)
     refresh: bool = False
-    use_groq: bool = True
+    use_groq: bool = False
     save_report: bool = True
     is_public: bool = False
 
@@ -143,6 +153,11 @@ class WatchInput(BaseModel):
     watched: bool
 
 
+class RefreshOptions(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    use_groq: bool | None = None
+
+
 @asynccontextmanager
 async def lifespan(app):
     # One Render process: rows left running after a restart cannot resume safely.
@@ -156,41 +171,67 @@ async def lifespan(app):
                 report.status='failed';report.stage='failed';report.progress=100
                 report.error_message='The server restarted. Please start a new analysis.'
                 finish_novelty_usage(db,report.id,8,'interrupted')
-            retention=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS);temporary=now()-timedelta(hours=1)
-            db.execute(delete(NoveltyReport).where(((NoveltyReport.saved.is_(True))&(NoveltyReport.created_at<retention))|((NoveltyReport.saved.is_(False))&(NoveltyReport.created_at<temporary))))
-            db.execute(delete(NoveltyWorkspace).where(NoveltyWorkspace.report_id.not_in(select(NoveltyReport.id))))
+            cleanup_expired_reports(db)
             oldest_day=(now()-timedelta(days=7)).date().isoformat()
             db.execute(delete(NoveltyUsage).where(NoveltyUsage.day_utc<oldest_day))
             db.execute(delete(NoveltyDailyBudget).where(NoveltyDailyBudget.day_utc<oldest_day))
+            db.execute(delete(GroqDailyBudget).where(GroqDailyBudget.day_utc<oldest_day))
         app.state.database_ready=True
     except SQLAlchemyError:
         # Keep the independent sample report available when report storage is offline.
         app.state.database_ready=False
-    yield
+    cleanup_task=asyncio.create_task(retention_loop())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        try:await cleanup_task
+        except asyncio.CancelledError:pass
+
+
+async def retention_loop():
+    while True:
+        await asyncio.sleep(3600)
+        def clean():
+            try:
+                with Session.begin() as db:cleanup_expired_reports(db)
+            except SQLAlchemyError:pass
+        await asyncio.to_thread(clean)
 
 
 app = FastAPI(title='ResearchScope · Research evidence workspace', lifespan=lifespan)
 app.include_router(venture_router)
 app.include_router(integrity_router)
 app.include_router(research_state_router)
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type','X-Review-Token'])
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=['GET', 'POST', 'DELETE'], allow_headers=['Content-Type','Authorization','X-Review-Token','X-SerpApi-Key','X-Groq-Key'])
 hits = defaultdict(deque)
 salt = secrets.token_bytes(32)
 research_lock = Lock()
+pdf_upload_slot = asyncio.Semaphore(1)
 
 
 @app.middleware('http')
 async def headers(request, call_next):
-    if request.method == 'POST':
-        # Also handles requests without Content-Length, such as chunked bodies.
-        body = bytearray()
-        async for chunk in request.stream():
-            body.extend(chunk)
-            limit = 5_000_000 if request.url.path.endswith('/document-review') else 1_600_000 if request.url.path.endswith('/research-state') else 16384
-            if len(body) > limit:
-                return error(413, 'REQUEST_TOO_LARGE', 'Request is too large.')
-        request._body = bytes(body)
-    response = await call_next(request)
+    pdf=request.method=='POST' and request.url.path.endswith('/document-review')
+    if pdf:
+        if pdf_upload_slot.locked():return error(429,'PDF_BUSY','Another document is being reviewed. Try again shortly.')
+        await pdf_upload_slot.acquire()
+    try:
+        if request.method == 'POST':
+            body = bytearray()
+            limit = 5_000_000 if pdf else 1_600_000 if request.url.path.endswith('/research-state') else 16384
+            try:
+                async with asyncio.timeout(15):
+                    async for chunk in request.stream():
+                        if len(body)+len(chunk) > limit:
+                            return error(413, 'REQUEST_TOO_LARGE', 'Request is too large.')
+                        body.extend(chunk)
+            except TimeoutError:
+                return error(408,'UPLOAD_TIMEOUT','The upload took too long. Try again.')
+            request._body = bytes(body)
+        response = await call_next(request)
+    finally:
+        if pdf:pdf_upload_slot.release()
     response.headers.update({'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'})
     return response
 
@@ -202,7 +243,7 @@ async def validation_error(request, exc):
 
 @app.exception_handler(HTTPException)
 async def http_error(request, exc):
-    message = exc.detail if (request.url.path.startswith(('/api/venture/', '/api/research-integrity/')) or request.url.path.endswith('/research-state')) and isinstance(exc.detail,str) else 'The requested route or method is unavailable.'
+    message = exc.detail if (exc.status_code==422 or request.url.path.startswith(('/api/venture/', '/api/research-integrity/')) or request.url.path.endswith('/research-state')) and isinstance(exc.detail,str) else 'The requested route or method is unavailable.'
     return error(exc.status_code, 'HTTP_ERROR', message)
 
 
@@ -226,19 +267,23 @@ def health():
 @app.get('/api/demo-status')
 def novelty_demo_status():
     configured=hosted_search_configured()
-    mode='unavailable'
+    mode='unavailable';busy=True;used=0
     if configured:
         day=datetime.now(timezone.utc).date().isoformat()
         try:
             with Session() as db:
                 budget=db.get(NoveltyDailyBudget,day)
                 reserved=budget.calls_reserved if budget else 0;used=budget.calls_used if budget else 0
-                busy=db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1))
+                busy=db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Analysis.id).where(Analysis.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1))
             mode='at_capacity' if busy or reserved+used+8>settings.hosted_serpapi_daily_budget-settings.hosted_serpapi_reserve else 'available'
         except SQLAlchemyError:
             mode='unavailable'
+    quota_unavailable=False
+    if configured:
+        try:quota_unavailable=not busy and used+8>settings.hosted_serpapi_daily_budget-settings.hosted_serpapi_reserve
+        except SQLAlchemyError:pass
     message={'available':'Hosted demo available','at_capacity':'Hosted demo temporarily at capacity','unavailable':'Sample mode available'}[mode]
-    return {'hosted_mode':mode, 'sample_mode':True,
+    return {'hosted_mode':mode, 'sample_mode':True, 'personal_mode':True, 'quota_exhausted':quota_unavailable,
             'groq_mode':'available' if settings.groq_enabled and bool(settings.groq_api_key.get_secret_value()) else 'unavailable',
             'message':message}
 
@@ -274,58 +319,83 @@ def novelty_recent():
 
 @app.post('/api/novelty/analyses')
 def create_novelty_analysis(data:NoveltyInput, request:Request, background:BackgroundTasks):
-    if not hosted_search_configured():
-        return error(503,'HOSTED_DEMO_UNAVAILABLE','Live analysis is not configured. Open the prepared sample report or run locally with a backend SerpApi key.')
+    return start_novelty_analysis(data, request, background, credentials_for(request))
+
+
+def start_novelty_analysis(data, request, background, credentials, original_fingerprint=None):
+    if not credentials and not hosted_search_configured():
+        return error(503,'HOSTED_DEMO_UNAVAILABLE','Live analysis is not configured. Use the sample or your own provider key.')
     normalized=data.model_dump(exclude={'refresh','save_report','is_public'})
-    fingerprint=hashlib.sha256(json.dumps({'input':normalized,'is_public':data.is_public,'save_report':data.save_report},sort_keys=True).encode()).hexdigest()
+    # Unlisted requests never disclose another user's cached report or queued ID.
+    fingerprint=original_fingerprint or hashlib.sha256(json.dumps({'input':normalized,'is_public':data.is_public,
+        'save_report':data.save_report,'mode':'personal' if credentials else 'hosted',
+        'scope':secrets.token_hex(16) if not data.is_public or credentials else 'public'},sort_keys=True).encode()).hexdigest()
     address=request.client.host if request.client else 'unknown'
-    ip_hash=hmac.new(settings.ip_hash_secret.get_secret_value().encode(),address.encode(),hashlib.sha256).hexdigest()
+    ip_hash=hmac.new(settings.ip_hash_secret.get_secret_value().encode() or salt,address.encode(),hashlib.sha256).hexdigest()
     day=datetime.now(timezone.utc).date().isoformat()
+    tokens={}
     with research_lock, Session.begin() as db:
-        retention=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS);temporary=now()-timedelta(hours=1)
-        db.execute(delete(NoveltyReport).where(((NoveltyReport.saved.is_(True))&(NoveltyReport.created_at<retention))|((NoveltyReport.saved.is_(False))&(NoveltyReport.created_at<temporary))))
+        cleanup_expired_reports(db)
         oldest_day=(now()-timedelta(days=7)).date().isoformat()
         db.execute(delete(NoveltyUsage).where(NoveltyUsage.day_utc<oldest_day))
         db.execute(delete(NoveltyDailyBudget).where(NoveltyDailyBudget.day_utc<oldest_day))
-        if not data.refresh:
-            previous=db.scalar(select(NoveltyReport).where(NoveltyReport.fingerprint==fingerprint,NoveltyReport.status=='complete',NoveltyReport.saved.is_(True)).order_by(desc(NoveltyReport.created_at)))
-            if previous and previous.created_at >= now()-timedelta(hours=24):
+        if data.is_public and not credentials and not data.refresh:
+            previous=db.scalar(select(NoveltyReport).where(NoveltyReport.fingerprint==fingerprint,NoveltyReport.is_public.is_(True),NoveltyReport.status=='complete',NoveltyReport.saved.is_(True)).order_by(desc(NoveltyReport.created_at)))
+            if previous and (previous.created_at.replace(tzinfo=previous.created_at.tzinfo or timezone.utc)) >= now()-timedelta(hours=24):
                 return {'id':previous.id,'status':'complete','cached':True,'report_url':f'/reports/{previous.id}'}
-        running=db.scalar(select(NoveltyReport).where(NoveltyReport.fingerprint==fingerprint,NoveltyReport.status.in_(['queued','running'])))
-        if running:return error(409,'ANALYSIS_RUNNING','This analysis is already running.',{'id':running.id})
-        if db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1)):
+        if db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Analysis.id).where(Analysis.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1)):
             return error(429,'SERVER_BUSY','Another analysis is running. Try again shortly.')
-        ip_count=db.scalar(select(func.count()).select_from(NoveltyUsage).where(NoveltyUsage.day_utc==day,NoveltyUsage.ip_hash==ip_hash)) or 0
-        if ip_count>=settings.hosted_reports_per_ip_per_day:
-            return error(429,'HOSTED_DEMO_CAPACITY_REACHED','Hosted daily limit reached. Open the sample report and try again tomorrow.')
-        budget=db.get(NoveltyDailyBudget,day)
-        if budget is None:
-            budget=NoveltyDailyBudget(day_utc=day,calls_reserved=0,calls_used=0);db.add(budget);db.flush()
-        available=max(0,settings.hosted_serpapi_daily_budget-settings.hosted_serpapi_reserve)
-        if budget.calls_reserved+budget.calls_used+8>available:
-            return error(429,'HOSTED_DEMO_CAPACITY_REACHED','Hosted search is temporarily at capacity. Open the prepared sample report.')
+        if credentials:
+            key='personal:'+ip_hash
+            current=time.monotonic()
+            while hits[key] and current-hits[key][0]>=3600:hits[key].popleft()
+            if len(hits[key])>=settings.rate_limit_per_hour:
+                return error(429,'RATE_LIMIT','Personal search limit reached. Try again in one hour.')
+        else:
+            ip_count=db.scalar(select(func.count()).select_from(NoveltyUsage).where(NoveltyUsage.day_utc==day,NoveltyUsage.ip_hash==ip_hash,NoveltyUsage.calls_reserved>0)) or 0
+            if ip_count>=settings.hosted_reports_per_ip_per_day:
+                return error(429,'HOSTED_USER_LIMIT','Your hosted daily report limit is reached. Use your own provider key or try tomorrow.')
+        budget=None
+        if not credentials:
+            budget=db.get(NoveltyDailyBudget,day)
+            if budget is None:
+                budget=NoveltyDailyBudget(day_utc=day,calls_reserved=0,calls_used=0);db.add(budget);db.flush()
+            available=max(0,settings.hosted_serpapi_daily_budget-settings.hosted_serpapi_reserve)
+            if budget.calls_reserved+budget.calls_used+8>available:
+                return error(429,'SHARED_QUOTA_EXHAUSTED','The shared daily allowance cannot fund another report. Use your own keys or wait for the UTC reset.')
         row=NoveltyReport(fingerprint=fingerprint,title=normalized['title'],field=normalized.get('field',''),input_data=normalized,status='queued',saved=data.save_report,is_public=data.is_public)
-        db.add(row);db.flush(); ident=row.id
-        db.add(NoveltyUsage(day_utc=day,ip_hash=ip_hash,analysis_id=ident,calls_reserved=8,calls_used=0,status='reserved'))
-        budget.calls_reserved+=8
-    background.add_task(run_novelty_job,ident)
-    ai_mode='enabled' if settings.groq_enabled and settings.groq_api_key.get_secret_value() else 'unavailable'
-    return JSONResponse(status_code=202,content={'id':ident,'status':'queued','cached':False,'credential_mode':'hosted','ai_enrichment':ai_mode,'report_url':f'/reports/{ident}'})
+        db.add(row);db.flush();ident=row.id
+        if row.saved and not row.is_public:
+            owner=secrets.token_urlsafe(32);reviewer=secrets.token_urlsafe(32)
+            db.add(NoveltyWorkspace(report_id=ident,owner_token_hash=hashlib.sha256(owner.encode()).hexdigest(),review_token_hash=hashlib.sha256(reviewer.encode()).hexdigest(),comments=[],watched=False))
+            tokens={'owner_token':owner,'review_token':reviewer}
+        db.add(NoveltyUsage(day_utc=day,ip_hash=ip_hash,analysis_id=ident,calls_reserved=0 if credentials else 8,calls_used=0,status='reserved'))
+        if budget:budget.calls_reserved+=8
+        if credentials:hits[key].append(current)
+    background.add_task(run_novelty_job,ident,credentials)
+    ai_mode='enabled' if (bool(credentials.groq.get_secret_value()) if credentials else settings.groq_enabled and bool(settings.groq_api_key.get_secret_value())) else 'unavailable'
+    return JSONResponse(status_code=202,content={'id':ident,'status':'queued','cached':False,'credential_mode':'personal' if credentials else 'hosted','ai_enrichment':ai_mode,'report_url':f'/reports/{ident}',**tokens})
 
 
 @app.post('/api/novelty/analyses/{analysis_id}/refresh')
-def refresh_novelty_analysis(analysis_id:UUID, request:Request, background:BackgroundTasks):
+def refresh_novelty_analysis(analysis_id:UUID, request:Request, background:BackgroundTasks, options:RefreshOptions|None=None):
     with Session() as db:
         row=db.get(NoveltyReport,str(analysis_id))
         if not novelty_report_current(row) or not row.saved:
             return error(404,'NOT_FOUND','A saved completed report is required.')
         workspace=db.get(NoveltyWorkspace,str(analysis_id))
-        if workspace and not owner_authorized(request,workspace):
+        if not workspace or not owner_authorized(request,workspace):
             return error(403,'OWNER_LINK_REQUIRED','Open the owner workspace link to refresh this watched report.')
         original=deepcopy(row.input_data)
+        if options and options.use_groq is not None:original['use_groq']=options.use_groq
         original['save_report']=row.saved
         original['is_public']=row.is_public
-    return create_novelty_analysis(NoveltyInput(**original,refresh=True),request,background)
+        fingerprint=row.fingerprint
+        personal=row.report.get('credential_mode')=='personal'
+    credentials=credentials_for(request)
+    if personal and not credentials:
+        return error(409,'PERSONAL_KEYS_REQUIRED','Re-enter your personal keys to refresh this report.')
+    return start_novelty_analysis(NoveltyInput(**original,refresh=True),request,background,credentials,fingerprint)
 
 
 @app.get('/api/novelty/analyses/{analysis_id}')
@@ -337,6 +407,7 @@ def get_novelty_analysis(analysis_id:UUID):
         created=row.created_at if row.created_at.tzinfo else row.created_at.replace(tzinfo=timezone.utc)
         if created<now()-retention:
             db.delete(row)
+            db.execute(delete(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(analysis_id)))
             return error(404,'NOT_FOUND','This report has expired.')
         if row.status=='complete':return row.report
         return {'id':row.id,'status':row.status,'stage':row.stage,'progress':row.progress,'error_message':row.error_message}
@@ -395,43 +466,39 @@ async def sample_document_review(request:Request):
 
 
 async def extract_document_review(request,claims):
-    from pypdf import PdfReader
     if request.headers.get('content-type','').split(';')[0].strip() != 'application/pdf':
         return error(415,'PDF_REQUIRED','Upload a PDF file.')
     raw=await request.body()
     if not raw.startswith(b'%PDF-') or len(raw)>5_000_000:
         return error(422,'INVALID_PDF','Choose a PDF smaller than 5 MB.')
     try:
-        reader=PdfReader(BytesIO(raw),strict=False)
-        if reader.is_encrypted:
-            return error(422,'ENCRYPTED_PDF','Unlock the PDF before review.')
-        passages=[]
-        for page_number,page in enumerate(reader.pages[:30],1):
-            content=' '.join((page.extract_text() or '')[:20000].split())
-            for sentence in content.split('. '):
-                if len(sentence)>=45:
-                    passages.append({'page':page_number,'text':sentence[:700]})
+        document=await extract_pdf(raw)
+        passages=document['passages']
         results=[]
         for claim in claims:
             ranked=sorted(({**passage,'similarity':round(cosine(claim['text'],passage['text'])*100)} for passage in passages),
                           key=lambda passage:passage['similarity'],reverse=True)
             results.append({'claim_id':claim['id'],'claim':claim['text'],'passages':[p for p in ranked[:3] if p['similarity']>=10]})
-        return {'page_count':len(reader.pages),'pages_checked':min(30,len(reader.pages)),
+        return {'page_count':document['page_count'],'pages_checked':min(30,document['page_count']),
                 'claims':results,'limitation':'Extracted PDF text may omit figures, tables, or scanned pages. Verify every passage in the original document. The uploaded PDF is not saved.'}
+    except PdfBusy:
+        return error(429,'PDF_BUSY','Another document is being reviewed. Try again shortly.')
+    except PdfUnavailable:
+        return error(503,'PDF_WORKER_UNAVAILABLE','PDF review requires the Linux backend worker. Use the hosted app for document review.')
     except Exception:
-        return error(422,'PDF_EXTRACTION_FAILED','Text could not be extracted from this PDF.')
+        return error(422,'PDF_EXTRACTION_FAILED','Text extraction failed or exceeded its resource limit. Choose a simpler, unlocked PDF.')
 
 
 def review_authorized(request, workspace):
     supplied=request.headers.get('X-Review-Token','')
-    if not supplied:return False
+    if not supplied or len(supplied)>200:return False
     digest=hashlib.sha256(supplied.encode()).hexdigest()
     return hmac.compare_digest(digest,workspace.review_token_hash) or hmac.compare_digest(digest,workspace.owner_token_hash)
 
 
 def owner_authorized(request,workspace):
     supplied=request.headers.get('X-Review-Token','')
-    return bool(supplied) and hmac.compare_digest(hashlib.sha256(supplied.encode()).hexdigest(),workspace.owner_token_hash)
+    return bool(supplied) and len(supplied)<=200 and hmac.compare_digest(hashlib.sha256(supplied.encode()).hexdigest(),workspace.owner_token_hash)
 
 
 def workspace_view(db, report, workspace):
@@ -454,25 +521,31 @@ def workspace_view(db, report, workspace):
 
 @app.post('/api/novelty/analyses/{analysis_id}/workspace')
 def create_novelty_workspace(analysis_id:UUID):
+    return error(403,'OWNER_LINK_REQUIRED','Owner credentials are issued only when the report is created. An ordinary report link cannot create or claim a workspace.')
+
+
+@app.post('/api/novelty/analyses/{analysis_id}/workspace/rotate')
+def rotate_workspace(analysis_id:UUID, request:Request):
     with Session.begin() as db:
         report=db.get(NoveltyReport,str(analysis_id))
-        if not novelty_report_current(report) or not report.saved or report.is_public:
-            return error(404,'NOT_FOUND','A saved unlisted report is required for a review workspace.')
-        if db.get(NoveltyWorkspace,str(analysis_id)):
-            return error(409,'WORKSPACE_EXISTS','The workspace already exists. Use its saved review link.')
-        token=secrets.token_urlsafe(32);owner_token=secrets.token_urlsafe(32)
-        workspace=NoveltyWorkspace(report_id=str(analysis_id),owner_token_hash=hashlib.sha256(owner_token.encode()).hexdigest(),
-                                   review_token_hash=hashlib.sha256(token.encode()).hexdigest(),comments=[],watched=False)
-        db.add(workspace)
-        return {'review_token':token,'owner_token':owner_token,'workspace':workspace_view(db,report,workspace)}
+        workspace=db.scalar(select(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(analysis_id)).with_for_update())
+        if not novelty_report_current(report) or not workspace or not owner_authorized(request,workspace):
+            return error(403,'OWNER_LINK_REQUIRED','Only the current owner may replace workspace links.')
+        owner=secrets.token_urlsafe(32);reviewer=secrets.token_urlsafe(32)
+        changed=db.execute(update(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(analysis_id),NoveltyWorkspace.owner_token_hash==workspace.owner_token_hash).values(
+            owner_token_hash=hashlib.sha256(owner.encode()).hexdigest(),review_token_hash=hashlib.sha256(reviewer.encode()).hexdigest()))
+        if changed.rowcount!=1:return error(409,'WORKSPACE_CHANGED','Another owner replaced these links. Reload before continuing.')
+        return {'owner_token':owner,'review_token':reviewer,'workspace':workspace_view(db,report,workspace)}
 
 
 @app.get('/api/novelty/analyses/{analysis_id}/workspace')
-def get_novelty_workspace(analysis_id:UUID):
+def get_novelty_workspace(analysis_id:UUID, request:Request):
     with Session() as db:
         report=db.get(NoveltyReport,str(analysis_id));workspace=db.get(NoveltyWorkspace,str(analysis_id))
         if not novelty_report_current(report) or not workspace:
             return error(404,'NOT_FOUND','No review workspace exists for this report.')
+        if not review_authorized(request,workspace):
+            return error(403,'REVIEW_LINK_REQUIRED','Open the owner or reviewer link to read feedback.')
         return workspace_view(db,report,workspace)
 
 
@@ -492,7 +565,8 @@ def add_novelty_comment(analysis_id:UUID, item:ReviewCommentInput, request:Reque
         comments.append({'id':secrets.token_hex(8),'author':item.author.strip(),'claim_id':item.claim_id,
                          'kind':item.kind,'text':item.text.strip(),'source_url':cleaned_url,
                          'created_at':now().isoformat()})
-        workspace.comments=comments
+        changed=db.execute(update(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(analysis_id),NoveltyWorkspace.comments==workspace.comments,NoveltyWorkspace.owner_token_hash==workspace.owner_token_hash,NoveltyWorkspace.review_token_hash==workspace.review_token_hash).values(comments=comments))
+        if changed.rowcount!=1:return error(409,'WORKSPACE_CHANGED','Feedback changed. Reload before saving your comment.')
         return {'comments':comments}
 
 
@@ -502,16 +576,20 @@ def set_novelty_watch(analysis_id:UUID, item:WatchInput, request:Request):
         report=db.get(NoveltyReport,str(analysis_id));workspace=db.get(NoveltyWorkspace,str(analysis_id))
         if not novelty_report_current(report) or not workspace or not owner_authorized(request,workspace):
             return error(403,'OWNER_LINK_REQUIRED','Open the owner workspace link to change watch settings.')
-        workspace.watched=item.watched
+        changed=db.execute(update(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(analysis_id),NoveltyWorkspace.owner_token_hash==workspace.owner_token_hash).values(watched=item.watched))
+        if changed.rowcount!=1:return error(403,'OWNER_LINK_REQUIRED','The owner link was replaced. Open the current link.')
+        db.refresh(workspace)
         return workspace_view(db,report,workspace)
 
 
 @app.post('/api/analyses')
 def create_analysis(data: AnalysisInput, request: Request, background: BackgroundTasks):
+    credentials=credentials_for(request)
     # Keep demo data attached to its actual synthetic scenario, never arbitrary markets.
-    if not settings.live_serpapi_enabled and (data.business_category.casefold() != 'coworking space' or data.city.casefold() != 'pune' or data.country != 'India' or {k.casefold() for k in data.keywords} != {'coworking pune', 'shared office pune', 'flexible office pune'}):
+    if not settings.live_serpapi_enabled and not credentials and (data.business_category.casefold() != 'coworking space' or data.city.casefold() != 'pune' or data.country != 'India' or {k.casefold() for k in data.keywords} != {'coworking pune', 'shared office pune', 'flexible office pune'}):
         return error(422, 'FIXTURE_SCENARIO_ONLY', 'Sample mode supports the Pune coworking example. Enable live search on the backend for other markets.')
-    fingerprint = data.fingerprint(settings.live_serpapi_enabled)
+    fingerprint = data.fingerprint(settings.live_serpapi_enabled or bool(credentials))
+    if credentials:fingerprint=hashlib.sha256((fingerprint+secrets.token_hex(16)).encode()).hexdigest()
     with research_lock, Session() as db:
         running = active(db, fingerprint)
         if running:
@@ -519,6 +597,8 @@ def create_analysis(data: AnalysisInput, request: Request, background: Backgroun
         previous = cached(db, fingerprint) if not data.refresh else None
         if previous:
             return {'id': previous.id, 'status': 'complete', 'cached': True, 'report_url': f'/reports/{previous.id}'}
+        if not credentials and settings.live_serpapi_enabled and hosted_remaining()<1:
+            return error(429,'SHARED_QUOTA_EXHAUSTED','Shared search allowance exhausted. Use your own keys or wait for the UTC reset.')
         current = time.monotonic()
         for key in list(hits):
             while hits[key] and current - hits[key][0] >= 3600:
@@ -528,7 +608,7 @@ def create_analysis(data: AnalysisInput, request: Request, background: Backgroun
         key = hashlib.sha256(salt + (request.client.host if request.client else 'unknown').encode()).hexdigest()
         if len(hits[key]) >= settings.rate_limit_per_hour:
             return error(429, 'RATE_LIMIT', 'Analysis limit reached. Try again in one hour.')
-        if db.scalar(select(Analysis).where(Analysis.status.in_(['queued', 'running'])).limit(1)) or db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1)):
+        if db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Analysis).where(Analysis.status.in_(['queued', 'running'])).limit(1)) or db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1)):
             return error(429, 'SERVER_BUSY', 'Another report is running. Please try again shortly.')
         row = Analysis(fingerprint=fingerprint, **data.model_dump(exclude={'refresh', 'options'}))
         db.add(row)
@@ -539,7 +619,7 @@ def create_analysis(data: AnalysisInput, request: Request, background: Backgroun
             running = active(db, fingerprint)
             return error(409, 'ANALYSIS_RUNNING', 'This analysis is already running.', {'id': running.id} if running else {})
         hits[key].append(current)
-        background.add_task(run_job, row.id, data)
+        background.add_task(run_job, row.id, data, credentials)
         return JSONResponse(status_code=202, content={'id': row.id, 'status': 'queued', 'cached': False, 'report_url': f'/reports/{row.id}'})
 
 
@@ -638,12 +718,15 @@ def get_research(analysis_id: UUID, job_id: UUID):
 
 @app.post('/api/analyses/{analysis_id}/research')
 def create_research(analysis_id: UUID, data: ResearchInput, request: Request, background: BackgroundTasks):
+    credentials=credentials_for(request)
     with research_lock, Session.begin() as db:
         report = db.get(Analysis,str(analysis_id))
         if not report or report.status != 'complete':
             return error(404,'NOT_FOUND','A completed report is required.')
-        mode = report.report['data_mode']
-        if mode == 'live' and not settings.live_serpapi_enabled:
+        mode = 'live' if credentials else report.report['data_mode']
+        if report.report.get('credential_mode')=='personal' and not credentials:
+            return error(409,'PERSONAL_KEYS_REQUIRED','Re-enter your keys to search from this personal report.')
+        if mode == 'live' and not settings.live_serpapi_enabled and not credentials:
             return error(409,'LIVE_DISABLED','Live searches are disabled. Enable them before researching a live report.')
         try:
             plans = plan_requests(data,report.report)
@@ -652,11 +735,13 @@ def create_research(analysis_id: UUID, data: ResearchInput, request: Request, ba
         canonical = data.canonical()
         fingerprint = hashlib.sha256(json.dumps({'report':str(analysis_id),'input':canonical,'version':1,'mode':mode},sort_keys=True).encode()).hexdigest()
         recent = db.scalars(select(Signal).where(Signal.analysis_id==report.id,Signal.signal_type=='research_extension',Signal.created_at >= now()-timedelta(hours=1)).order_by(Signal.created_at.desc())).all()
-        for previous in recent:
-            if previous.payload.get('fingerprint') == fingerprint and (previous.status in ('queued','running') or (previous.status == 'complete' and not data.refresh)):
+        for previous in ([] if credentials else recent):
+            if previous.payload.get('credential_mode')!='personal' and previous.payload.get('fingerprint') == fingerprint and (previous.status in ('queued','running') or (previous.status == 'complete' and not data.refresh)):
                 return {'id':previous.id,'cached':previous.status=='complete'}
-        if db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Analysis.id).where(Analysis.status.in_(['queued','running'])).limit(1)):
+        if db.scalar(select(NoveltyReport.id).where(NoveltyReport.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Signal.id).where(Signal.signal_type=='research_extension',Signal.status.in_(['queued','running'])).limit(1)) or db.scalar(select(Analysis.id).where(Analysis.status.in_(['queued','running'])).limit(1)):
             return error(429,'SERVER_BUSY','Another search is running. Open its saved run or try again shortly.')
+        if mode=='live' and not credentials and hosted_remaining()<1:
+            return error(429,'SHARED_QUOTA_EXHAUSTED','Shared search allowance exhausted. Use your own keys or wait for the UTC reset.')
         current = time.monotonic()
         for key in list(hits):
             while hits[key] and current-hits[key][0] >= 3600:
@@ -666,12 +751,12 @@ def create_research(analysis_id: UUID, data: ResearchInput, request: Request, ba
         key = hashlib.sha256(salt+(request.client.host if request.client else 'unknown').encode()).hexdigest()
         if len(hits[key]) >= settings.rate_limit_per_hour:
             return error(429,'RATE_LIMIT','Search-run limit reached. Try again in one hour.')
-        payload = {'tool':data.tool,'input':canonical,'data_mode':mode,'fingerprint':fingerprint,'planned_requests':len(plans),
+        payload = {'tool':data.tool,'input':canonical,'data_mode':mode,'credential_mode':'personal' if credentials else 'hosted','fingerprint':fingerprint,'planned_requests':len(plans),
                    'completed_requests':0,'batches':[], 'usage':{'mode':mode,'logical_requests':{},'provider_attempts':{},'total_requests':0,'total_provider_attempts':0,'billing_note':'Requests are not confirmed billable credits.'},
                    'sample_notice':'Fixed synthetic examples for interface testing; they do not answer custom searches.' if mode=='fixture' else ''}
         row = Signal(analysis_id=report.id,engine=ENGINES[data.tool],signal_type='research_extension',status='queued',payload=payload)
         db.add(row)
         db.flush()
         hits[key].append(current)
-        background.add_task(run_research,row.id,data.tool,plans,mode,payload)
+        background.add_task(run_research,row.id,data.tool,plans,mode,payload,credentials)
         return {'id':row.id,'cached':False}

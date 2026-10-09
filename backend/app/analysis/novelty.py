@@ -15,6 +15,7 @@ from app.db.session import Session
 from app.models.novelty import NoveltyReport
 from app.analysis import groq_enrichment
 from app.analysis.research_guidance import build_guidance
+from app.analysis.normalizers import safe_url as sanitized_source_url
 from app.search_budget import claim_provider_attempt, DailySearchLimit
 
 STOP = set('a an and are as at be been by for from in into is it of on or that the their this to was were with'.split())
@@ -47,15 +48,7 @@ def cosine(a, b):
 
 
 def safe_url(url):
-    try:
-        p = urlsplit(url or '')
-        if p.scheme not in ('http', 'https') or not p.hostname or p.username or p.password:
-            return None
-        query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
-                 if k.lower() not in ('api_key', 'key', 'token', 'access_token', 'gclid', 'ved', 'ei', 'ref') and not k.lower().startswith('utm_')]
-        return urlunsplit((p.scheme, p.netloc, p.path, urlencode(query), p.fragment))
-    except (ValueError, TypeError):
-        return None
+    return sanitized_source_url(url)
 
 
 def rows(raw, key):
@@ -226,8 +219,8 @@ def score_report(data, papers, patents, web, queries, warnings):
     return report
 
 
-def provider_search(client, engine, **params):
-    if settings.live_serpapi_enabled:
+def provider_search(client, engine, *, personal=False, **params):
+    if settings.live_serpapi_enabled and not personal:
         try:claim_provider_attempt()
         except DailySearchLimit:raise ProviderCapacityError() from None
     try:
@@ -246,7 +239,7 @@ def provider_search(client, engine, **params):
     return result
 
 
-def run_novelty_job(report_id):
+def run_novelty_job(report_id, credentials=None):
     with Session() as db:
         row = db.get(NoveltyReport, report_id)
         if not row: return
@@ -256,9 +249,9 @@ def run_novelty_job(report_id):
         db.commit()
     warnings=[]; papers=[]; patents=[]; web=[]; queries=[]; provider_calls=[0];provider_halted=[False]
     def search(engine, **params):
-        if provider_halted[0]: raise ProviderCapacityError()
+        if provider_halted[0] or provider_calls[0]>=8: raise ProviderCapacityError()
         provider_calls[0]+=1
-        try:return provider_search(client,engine,**params)
+        try:return provider_search(client,engine,personal=bool(credentials),**params)
         except ProviderCapacityError:
             provider_halted[0]=True
             raise
@@ -267,15 +260,17 @@ def run_novelty_job(report_id):
         'executive_summary':'A language model was not configured. Similarity and claim coverage were calculated deterministically from retrieved evidence.',
         'claim_explanations':[],'areas_needing_deeper_search':[],'warnings':[]}
     try:
-        key=settings.serpapi_key.get_secret_value()
-        if not settings.live_serpapi_enabled or not key:
+        key=credentials.serpapi.get_secret_value() if credentials else settings.serpapi_key.get_secret_value()
+        groq_available=bool(credentials.groq.get_secret_value()) if credentials else settings.groq_enabled and bool(settings.groq_api_key.get_secret_value())
+        if (not settings.live_serpapi_enabled and not credentials) or not key:
             raise RuntimeError('Live research is not configured on this server. Open the prepared sample report or configure a backend SerpApi key.')
         client=serpapi.Client(api_key=key, timeout=settings.request_timeout_seconds)
+        ai['model']=settings.groq_model if groq_available else None
         original_claims=bool(data.get('claims'))
-        if data.get('use_groq',True) and settings.groq_enabled and settings.groq_api_key.get_secret_value():
+        if data.get('use_groq',False) and groq_available:
             with Session.begin() as db: db.query(NoveltyReport).filter_by(id=report_id).update({'stage':'structuring_claims','progress':10})
             try:
-                structured=groq_enrichment.structure(data); ai['call_count']+=1
+                structured=groq_enrichment.structure(data,credentials=credentials); ai['call_count']+=1
                 data['claims']=structured['claims']
                 data['claims_source']='user' if original_claims else 'AI extracted'
                 warnings.extend(str(w)[:240] for w in structured['warnings'][:3])
@@ -352,10 +347,10 @@ def run_novelty_job(report_id):
         patents=collapse_patent_families(patents)
         with Session.begin() as db: db.query(NoveltyReport).filter_by(id=report_id).update({'stage':'comparing_claims','progress':84})
         report=score_report(data,papers,patents,web,queries,warnings)
-        if data.get('use_groq',True) and settings.groq_enabled and settings.groq_api_key.get_secret_value():
+        if data.get('use_groq',False) and groq_available:
             with Session.begin() as db: db.query(NoveltyReport).filter_by(id=report_id).update({'stage':'explaining_evidence','progress':93})
             try:
-                explanation=groq_enrichment.explain(data,report); ai['call_count']+=1
+                explanation=groq_enrichment.explain(data,report,credentials=credentials); ai['call_count']+=1
                 ai.update({'status':'complete' if ai['call_count']==2 else 'partial',
                            'executive_summary':explanation['executive_summary'],
                            'claim_explanations':explanation['claim_explanations'],
@@ -365,6 +360,7 @@ def run_novelty_job(report_id):
                 ai['warnings'].append('AI explanation unavailable; evidence and scores remain complete.')
         if ai['call_count'] and ai['status']=='unavailable': ai['status']='partial'
         report['ai_analysis']=ai
+        report['credential_mode']='personal' if credentials else 'hosted'
         report['is_public']=public_report;report['saved']=saved_report
         report['warnings']=list(dict.fromkeys(report['warnings']+ai['warnings']))
         with Session.begin() as db: db.query(NoveltyReport).filter_by(id=report_id).update({'stage':'building_report','progress':98})
@@ -377,7 +373,7 @@ def run_novelty_job(report_id):
             row=db.get(NoveltyReport,report_id)
             if row:
                 row.status='failed';row.stage='failed';row.progress=100
-                row.error_message='SerpApi authentication failed. Check the backend credential configuration.'
+                row.error_message='SerpApi authentication failed. Re-enter your personal key and start again.' if credentials else 'SerpApi authentication failed. Check the backend credential configuration.'
                 from app.main import finish_novelty_usage
                 finish_novelty_usage(db,report_id,provider_calls[0],'failed')
     except Exception:

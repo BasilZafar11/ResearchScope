@@ -4,6 +4,13 @@ export type ProjectRecords=Record<string,unknown>;
 const projectSchema=z.fromJSONSchema(recordSchema as Parameters<typeof z.fromJSONSchema>[0]);
 const groups=['defense','integrity','tools'] as const;
 const recoveryPrefix='researchscope-record-recovery:';
+function isAbsoluteHttpUrl(value:string){
+  if(value!==value.trim()||/[\u0000-\u001f\u007f-\u009f\\]/.test(value)||!/^https?:\/\//i.test(value))return false;
+  const authority=value.slice(value.indexOf('//')+2).split(/[/?#]/,1)[0];
+  if(!authority||authority.includes('@'))return false;
+  try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!!url.hostname&&!url.username&&!url.password;}
+  catch{return false;}
+}
 function storedNamespace(key:string){
   if(key==='novelty-shared-failures')return 'tools:failure-notebook';
   for(const group of groups){
@@ -67,7 +74,7 @@ export function validateProjectRecords(value:unknown):ProjectRecords {
     if(typeof item==='number'&&!Number.isFinite(item))throw new Error('Project contains an invalid numeric value.');
     if(item&&typeof item==='object')for(const [key,child] of Object.entries(item)){
       if(['__proto__','prototype','constructor'].includes(key))throw new Error('Project contains unsafe object keys.');
-      if(/url$/i.test(key)&&typeof child==='string'&&child&&/^[a-z]+:/i.test(child)&&!/^https?:\/\//i.test(child))throw new Error('Source URLs must use HTTP or HTTPS.');
+      if(/url$/i.test(key)&&typeof child==='string'&&child&&!isAbsoluteHttpUrl(child))throw new Error('Source URLs must be absolute HTTP or HTTPS links without credentials or control characters.');
       inspect(child,depth+1);
     }
   }

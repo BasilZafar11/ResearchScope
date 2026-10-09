@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import Session
@@ -39,9 +39,9 @@ class StatePatch(BaseModel):
         return self
 
 
-def authorized(db,report_id,token):
+def authorized(db,report_id,token,for_update=False):
     report=db.get(NoveltyReport,str(report_id))
-    workspace=db.get(NoveltyWorkspace,str(report_id))
+    workspace=db.scalar(select(NoveltyWorkspace).where(NoveltyWorkspace.report_id==str(report_id)).with_for_update()) if for_update else db.get(NoveltyWorkspace,str(report_id))
     created=report.created_at.replace(tzinfo=timezone.utc) if report and not report.created_at.tzinfo else report.created_at if report else None
     if not report or report.status!='complete' or not report.saved or not workspace or created+timedelta(days=SAVED_REPORT_RETENTION_DAYS)<=now():
         raise HTTPException(404,'The saved workspace is unavailable or expired.')
@@ -72,7 +72,7 @@ def get_state(report_id:UUID,x_review_token:str|None=Header(default=None)):
 def save_state(report_id:UUID,data:StatePatch,x_review_token:str|None=Header(default=None)):
     try:
         with Session.begin() as db:
-            report,role=authorized(db,report_id,x_review_token)
+            report,role=authorized(db,report_id,x_review_token,for_update=True)
             if role!='owner' and (data.delete or any(key in {'defense:decision-history','defense:evidence-snapshots'} for key in data.records)):
                 raise HTTPException(403,'Only the owner may delete records, publish decisions, or preserve evidence snapshots.')
             row=db.get(ResearchState,str(report_id))
@@ -81,6 +81,9 @@ def save_state(report_id:UUID,data:StatePatch,x_review_token:str|None=Header(def
             previous=dict(row.records if row else {})
             merged={**previous,**data.records}
             for key in data.delete:merged.pop(key,None)
+            snapshot_key='defense:evidence-snapshots'
+            if previous.get(snapshot_key) and snapshot_key in data.delete:
+                raise HTTPException(422,'Preserved evidence snapshots cannot be deleted from shared storage.')
             if len(merged)>100 or len(json.dumps(merged,allow_nan=False))>1_500_000:
                 raise HTTPException(422,'The complete workspace exceeds its storage limit. Export or remove records.')
             for key in ('defense:evidence-snapshots',):
@@ -95,6 +98,8 @@ def save_state(report_id:UUID,data:StatePatch,x_review_token:str|None=Header(def
                         identifiers.add(item['id'])
                         if item.get('id') in old and item!=old[item['id']]:
                             raise HTTPException(422,'Existing evidence snapshots are immutable. Save a new snapshot instead.')
+                    if not set(old).issubset(identifiers):
+                        raise HTTPException(422,'Preserved evidence snapshots must remain in shared storage.')
             changed=[key for key in set(previous)|set(merged) if previous.get(key)!=merged.get(key) or (key in previous)!=(key in merged)]
             history=list(row.history if row else [])
             history.append({'version':data.expected_version+1,'at':now().isoformat(),'role':role,'changed':sorted(changed),

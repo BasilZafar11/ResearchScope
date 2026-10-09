@@ -1,10 +1,11 @@
 import type {AnalysisInput,Job,Report,Summary} from '../types/analysis';
 import type {StressResult} from '../components/OpportunityStress';
+import {providerFetch} from './providerKeys';
 const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 export const stress=(id:string)=>request<StressResult>(`/api/analyses/${encodeURIComponent(id)}/stress`);
 export class ApiError extends Error { constructor(message:string,public code:string,public details:Record<string,string>={}) {super(message)} }
 export async function request<T>(path:string, options?:RequestInit):Promise<T> {
-  const res=await fetch(base+path,{...options,signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json',...options?.headers}});
+  const res=await providerFetch(base+path,{...options,headers:{'Content-Type':'application/json',...options?.headers}});
   const data=await res.json();
   if(!res.ok) throw new ApiError(data.error?.message||'The service is unavailable. Please try again.',data.error?.code||'REQUEST_FAILED',data.error?.details);
   return data;

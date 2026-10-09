@@ -16,10 +16,14 @@ FIXTURES = Path(__file__).resolve().parents[1] / 'fixtures'
 
 
 class SearchClient:
-    def __init__(self, live=None):
+    def __init__(self, live=None, credentials=None, max_attempts=30):
+        self.credentials = credentials
         self.live = settings.live_serpapi_enabled if live is None else live
-        if self.live and not settings.live_serpapi_enabled:
+        if credentials:
+            self.live = True
+        if self.live and not settings.live_serpapi_enabled and not credentials:
             raise EngineError('AUTH_ERROR')
+        self.max_attempts = max_attempts
         self.halted = False
         self.related_queries = []
         self.review_tokens = {}
@@ -62,12 +66,17 @@ class SearchClient:
     def _search(self, engine, params):
         if self.halted:
             raise EngineError('ALLOWANCE_UNAVAILABLE')
-        if not settings.serpapi_key.get_secret_value():
+        key = self.credentials.serpapi.get_secret_value() if self.credentials else settings.serpapi_key.get_secret_value()
+        if not key:
             raise EngineError('AUTH_ERROR')
         try:
-            client = serpapi.Client(api_key=settings.serpapi_key.get_secret_value(), timeout=settings.request_timeout_seconds)
-            claim_provider_attempt()
+            client = serpapi.Client(api_key=key, timeout=settings.request_timeout_seconds)
             with self._count_lock:
+                if sum(self.provider_attempts.values()) >= self.max_attempts:
+                    self.halted = True
+                    raise EngineError('ALLOWANCE_UNAVAILABLE')
+                if not self.credentials:
+                    claim_provider_attempt()
                 self.provider_attempts[engine] += 1
             result = dict(client.search({'engine': engine, **params}))
             error = str(result.get('error', ''))

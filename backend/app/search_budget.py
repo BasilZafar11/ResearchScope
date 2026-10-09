@@ -6,11 +6,32 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.config import settings
 from app.db.session import Session
-from app.models.novelty import NoveltyDailyBudget
+from app.models.novelty import NoveltyDailyBudget, GroqDailyBudget
 
 
 class DailySearchLimit(Exception):
     pass
+
+
+def hosted_remaining():
+    day = datetime.now(timezone.utc).date().isoformat()
+    with Session() as db:
+        budget = db.get(NoveltyDailyBudget, day)
+        return max(0, settings.hosted_serpapi_daily_budget - settings.hosted_serpapi_reserve
+                   - (budget.calls_used + budget.calls_reserved if budget else 0))
+
+
+def claim_groq_attempt():
+    day = datetime.now(timezone.utc).date().isoformat()
+    with Session.begin() as db:
+        insert = sqlite_insert if db.bind.dialect.name == 'sqlite' else postgres_insert
+        db.execute(insert(GroqDailyBudget).values(day_utc=day, calls_used=0)
+                   .on_conflict_do_nothing(index_elements=['day_utc']))
+        claimed = db.execute(update(GroqDailyBudget).where(GroqDailyBudget.day_utc == day,
+                             GroqDailyBudget.calls_used < max(0, settings.hosted_groq_daily_budget))
+                             .values(calls_used=GroqDailyBudget.calls_used + 1))
+        if claimed.rowcount != 1:
+            raise DailySearchLimit('Hosted AI allowance exhausted.')
 
 
 def claim_provider_attempt():

@@ -2,8 +2,20 @@
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 SCHEMA=json.loads(Path(__file__).with_name('research_record_schema.json').read_text())
+
+def absolute_http_url(value):
+    if value!=value.strip() or re.search(r'[\x00-\x1f\x7f-\x9f\\]',value) or not re.match(r'^https?://',value,re.I):
+        return False
+    try:
+        parsed=urlsplit(value)
+        # Accessing port also rejects malformed or out-of-range port numbers.
+        parsed.port
+        return parsed.scheme.lower() in {'http','https'} and bool(parsed.hostname) and not re.search(r'\s',parsed.netloc) and parsed.username is None and parsed.password is None
+    except ValueError:
+        return False
 
 def validate_records(records):
     def check(value,rule,path,depth=0):
@@ -29,8 +41,8 @@ def validate_records(records):
                 if key not in value:raise ValueError(f'{path}.{key}: required field is missing.')
             for key,item in value.items():
                 if key in {'__proto__','prototype','constructor'}:raise ValueError(f'{path}: unsafe object key.')
-                if re.search(r'url$',key,re.I) and isinstance(item,str) and re.match(r'^[a-z]+:',item,re.I) and not re.match(r'^https?://',item,re.I):
-                    raise ValueError(f'{path}.{key}: source URLs must use HTTP or HTTPS.')
+                if re.search(r'url$',key,re.I) and isinstance(item,str) and item and not absolute_http_url(item):
+                    raise ValueError(f'{path}.{key}: source URLs must be absolute HTTP or HTTPS links without credentials or control characters.')
                 child=rule.get('properties',{}).get(key)
                 if child is None:
                     child=next((shape for pattern,shape in rule.get('patternProperties',{}).items() if re.search(pattern,key)),None)

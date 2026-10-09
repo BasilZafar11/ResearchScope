@@ -47,6 +47,19 @@ def test_access_metadata_and_form_options_are_validated():
     with pytest.raises(ValidationError):StatePatch(expected_version=0,records={'integrity:power':{'mode':'invalid','effect':1,'sd':1,'alpha':0.05,'power':0.8,'attrition':0,'margin':1,'proportion':0.5,'rationale':''}})
 
 
+@pytest.mark.parametrize('url',['javascript:alert(1)','java\tscript:alert(1)','https://example.org/\nsource','/papers/one','//example.org/paper','https://user:secret@example.org/paper','https://@example.org/paper','https:///example.org/paper','https://example.org:99999/paper','https:\\example.org/paper'])
+def test_shared_records_reject_unsafe_source_urls(url):
+    records={'integrity:access-paper':{'doi':'10.1234/study','work':{'title':'Study','url':url},'candidates':[],'failures':[],'checked_at':'today','coverage':'Metadata only'}}
+    with pytest.raises(ValidationError,match='source URLs'):
+        StatePatch(expected_version=0,records=records)
+
+
+@pytest.mark.parametrize('url',['https://example.org/papers/one?year=2026#methods','http://example.org/paper',''])
+def test_shared_records_accept_absolute_http_and_empty_optional_urls(url):
+    records={'integrity:access-paper':{'doi':'10.1234/study','work':{'title':'Study','url':url},'candidates':[],'failures':[],'checked_at':'today','coverage':'Metadata only'}}
+    StatePatch(expected_version=0,records=records)
+
+
 def saved_report():
     identifier=uuid4()
     with Session.begin() as db:

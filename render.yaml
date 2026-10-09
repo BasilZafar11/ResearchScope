@@ -18,6 +18,8 @@ services:
         value: "true"
       - key: GROQ_MODEL
         value: openai/gpt-oss-20b
+      - key: HOSTED_GROQ_DAILY_BUDGET
+        value: "20"
       - key: IP_HASH_SECRET
         sync: false
       - key: HOSTED_REPORTS_PER_IP_PER_DAY

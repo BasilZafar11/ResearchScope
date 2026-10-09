@@ -1,5 +1,6 @@
 """Bounded, user-requested Crossref lookups; no background provider calls."""
 import asyncio
+import json
 import hashlib
 import secrets
 import re
@@ -35,6 +36,18 @@ _cache = OrderedDict()
 _slots = asyncio.Semaphore(3)
 
 
+async def bounded_json(client, url, **kwargs):
+    async with client.stream('GET', url, **kwargs) as response:
+        if response.status_code==404:raise HTTPException(404,'The provider has no record for this DOI.')
+        if response.status_code==429:raise HTTPException(503,'The metadata provider is rate limited. Try again later.')
+        response.raise_for_status()
+        body=bytearray()
+        async for chunk in response.aiter_bytes():
+            if len(body)+len(chunk)>1_000_000:raise ValueError('Metadata exceeds the response limit')
+            body.extend(chunk)
+    return json.loads(body)
+
+
 def normalize_doi(value: str) -> str:
     value = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)', '', value.strip(), flags=re.I)
     if not re.fullmatch(r'10\.\d{4,9}/[^\s,?#]+', value, flags=re.I):
@@ -49,22 +62,17 @@ async def crossref(path: str, params=None):
         return cached[1]
     async with _slots:
         try:
-            async with httpx.AsyncClient(timeout=12, follow_redirects=False) as client:
-                response = await client.get('https://api.crossref.org' + path, params=params,
+            async with httpx.AsyncClient(timeout=12, follow_redirects=False, trust_env=False) as client:
+                data = await bounded_json(client,'https://api.crossref.org' + path, params=params,
                                             headers={'User-Agent': 'ResearchIntegrity/1.0 (Crossref metadata review)'})
-            if response.status_code == 404:
-                raise HTTPException(404, 'Crossref has no record for this DOI.')
-            if response.status_code == 429:
-                raise HTTPException(503, 'Crossref is rate limited. Try again later.')
-            response.raise_for_status()
-            message = response.json()['message']
+            message = data['message']
             if not isinstance(message, dict):
                 raise ValueError('Unexpected metadata')
         except (httpx.HTTPError, ValueError, KeyError, TypeError):
             raise HTTPException(502, 'Crossref could not return usable metadata. The source remains unchecked.')
     _cache[key] = (time.monotonic(), message)
     _cache.move_to_end(key)
-    while len(_cache) > 256:
+    while len(_cache) > 32:
         _cache.popitem(last=False)
     return message
 
@@ -141,16 +149,15 @@ async def europe_pmc(doi):
     if cached and time.monotonic()-cached[0]<3600:return cached[1]
     async with _slots:
         try:
-            async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
-                response=await client.get('https://www.ebi.ac.uk/europepmc/webservices/rest/search',
+            async with httpx.AsyncClient(timeout=12,follow_redirects=False,trust_env=False) as client:
+                data=await bounded_json(client,'https://www.ebi.ac.uk/europepmc/webservices/rest/search',
                                           params={'query':'DOI:"'+doi+'"','format':'json','resultType':'core','pageSize':10})
-                response.raise_for_status()
-                result=response.json()['resultList']['result']
+                result=data['resultList']['result']
                 if not isinstance(result,list):raise ValueError()
         except (httpx.HTTPError,KeyError,ValueError,TypeError):
             raise HTTPException(502,'Europe PMC access metadata is unavailable.')
     _cache[key]=(time.monotonic(),result)
-    while len(_cache)>256:_cache.popitem(last=False)
+    while len(_cache)>32:_cache.popitem(last=False)
     return result
 
 

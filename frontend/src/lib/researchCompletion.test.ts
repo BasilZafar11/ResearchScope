@@ -58,6 +58,14 @@ describe('research record transfer',()=>{
     expect(()=>validateProjectRecords({'owner-token':'private'})).toThrow();
     expect(()=>validateProjectRecords(JSON.parse('{"defense:tasks":{"__proto__":{}}}'))).toThrow();
   });
+  it.each(['javascript:alert(1)','java\tscript:alert(1)','https://example.org/\nsource','/papers/one','//example.org/paper','https://user:secret@example.org/paper','https://@example.org/paper','https:///example.org/paper','https://example.org:99999/paper','https:\\example.org/paper'])('rejects unsafe imported source URL %j',url=>{
+    const records={'integrity:access-paper':{doi:'10.1234/study',work:{title:'Study',url},candidates:[],failures:[],checked_at:'today',coverage:'Metadata only'}};
+    expect(()=>validateProjectRecords(records)).toThrow('Source URLs');
+  });
+  it.each(['https://example.org/papers/one?year=2026#methods','http://example.org/paper',''])('accepts an absolute HTTP source or empty optional URL %j',url=>{
+    const records={'integrity:access-paper':{doi:'10.1234/study',work:{title:'Study',url},candidates:[],failures:[],checked_at:'today',coverage:'Metadata only'}};
+    expect(()=>validateProjectRecords(records)).not.toThrow();
+  });
   it('remaps namespaces to the current report without changing capability keys',()=>{
     localStorage.setItem('novelty-owner-one','private');applyProjectRecords('one',{'defense:tasks':[{'title':'Review'}]});
     expect(JSON.parse(localStorage.getItem('novelty-defense-one-tasks')!)).toEqual([{title:'Review'}]);expect(localStorage.getItem('novelty-owner-one')).toBe('private');
