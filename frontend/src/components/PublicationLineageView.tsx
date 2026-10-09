@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
@@ -9,15 +10,15 @@ const relations:Relation[]=['version of','extends','corrects','retracts'];
 const normalized=(text:string)=>text.toLocaleLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/\b(a|an|the|of|for|on|in|with|and|study|approach|method)\b/gu,' ').replace(/\s+/g,' ').trim();
 const tokens=(text:string)=>new Set(normalized(text).split(' ').filter(word=>word.length>2));
 const similarity=(a:string,b:string)=>{const x=tokens(a),y=tokens(b);if(!x.size||!y.size)return 0;return Math.round(100*[...x].filter(word=>y.has(word)).length/new Set([...x,...y]).size)};
-function read(key:string):Saved{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value?{edges:Array.isArray(value.edges)?value.edges:[],decisions:value.decisions||{},representatives:value.representatives||{}}:{edges:[],decisions:{},representatives:{}}}catch{return {edges:[],decisions:{},representatives:{}}}}
-function readPrior(reportId:string):Evidence[]{try{const items=JSON.parse(localStorage.getItem('novelty-defense-'+reportId+'-hidden-prior-work')||'[]') as Prior[];return (Array.isArray(items)?items:[]).map(item=>({id:'prior:'+item.id,source_type:'web' as const,title:item.title,summary_text:item.excerpt||'',source_url:item.url,publication_date:item.date||undefined,similarity_score:0}))}catch{return []}}
+function read(key:string):Saved{try{const value=parseStoredRecord(key,'null');return value?{edges:Array.isArray(value.edges)?value.edges:[],decisions:value.decisions||{},representatives:value.representatives||{}}:{edges:[],decisions:{},representatives:{}}}catch{return {edges:[],decisions:{},representatives:{}}}}
+function readPrior(reportId:string):Evidence[]{try{const items=parseStoredRecord('novelty-defense-'+reportId+'-hidden-prior-work','[]') as Prior[];return (Array.isArray(items)?items:[]).map(item=>({id:'prior:'+item.id,source_type:'web' as const,title:item.title,summary_text:item.excerpt||'',source_url:item.url,publication_date:item.date||undefined,similarity_score:0}))}catch{return []}}
 export function PublicationLineageView({reportId,evidence:reportEvidence}:{reportId:string;evidence:Evidence[]}){
  const key='novelty-defense-'+reportId+'-publication-lineage';const [saved,setSaved]=useState(()=>read(key));const [storageError,setStorageError]=useState(false);
  const [priorEvidence,setPriorEvidence]=useState(()=>readPrior(reportId));
  const [manualFrom,setManualFrom]=useResearchDraft(reportId,'PublicationLineageView-manualFrom',''),[manualTo,setManualTo]=useResearchDraft(reportId,'PublicationLineageView-manualTo',''),[relation,setRelation]=useResearchDraft<Relation>(reportId,'PublicationLineageView-relation','version of'),[reason,setReason]=useResearchDraft(reportId,'PublicationLineageView-reason','');
  const evidence=useMemo(()=>[...reportEvidence,...priorEvidence],[reportEvidence,priorEvidence]);
  useEffect(()=>{const listener=(event:Event)=>{const detail=(event as CustomEvent<Prior[]>).detail||[];setPriorEvidence(detail.map(item=>({id:'prior:'+item.id,source_type:'web' as const,title:item.title,summary_text:item.excerpt||'',source_url:item.url,publication_date:item.date||undefined,similarity_score:0})))};window.addEventListener('research-prior-work-update',listener);return()=>window.removeEventListener('research-prior-work-update',listener)},[]);
- const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Saved)=>{setSaved(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const proposals=useMemo(()=>{const pairs:{a:Evidence;b:Evidence;score:number;authorOverlap:number;key:string}[]=[];for(let i=0;i<evidence.length;i++)for(let j=i+1;j<evidence.length;j++){const a=evidence[i],b=evidence[j];const score=similarity(a.title,b.title);const authorsA=new Set((a.authors||[]).map(name=>name.toLocaleLowerCase())),authorsB=new Set((b.authors||[]).map(name=>name.toLocaleLowerCase()));const authorOverlap=[...authorsA].filter(name=>authorsB.has(name)).length;const pairKey=[a.id,b.id].sort().join('|');if(score>=40||(score>=25&&authorOverlap>0))pairs.push({a,b,score,authorOverlap,key:pairKey})}return pairs.sort((a,b)=>b.score-a.score||b.authorOverlap-a.authorOverlap).slice(0,30)},[evidence]);
  const confirmedPairs=new Set(saved.edges.map(edge=>[edge.from,edge.to].sort().join('|')));
  const candidates=proposals.filter(pair=>!confirmedPairs.has(pair.key)&&!saved.decisions[pair.key]);

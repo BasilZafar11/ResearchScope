@@ -1,12 +1,13 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useState} from 'react';
 type Experiment={id:string;name:string;dataset:string;population:string;comparator:string;outcome:string;metric:string;threshold:string;analysis:string;repetitions:string;evidence:string;reviewed:boolean};
 type Plans=Record<string,Experiment[]>;
 const blank=():Experiment=>({id:crypto.randomUUID(),name:'',dataset:'',population:'',comparator:'',outcome:'',metric:'',threshold:'',analysis:'',repetitions:'',evidence:'',reviewed:false});
-function read(key:string):Plans{try{const value=JSON.parse(localStorage.getItem(key)||'{}') as Record<string,unknown>;return Object.fromEntries(Object.entries(value).map(([claim,raw])=>{const items=Array.isArray(raw)?raw.map((item:any)=>({...blank(),...item,id:item.id||crypto.randomUUID()})):[{...blank(),...(raw as Partial<Experiment>)}];return [claim,items]}))}catch{return {}}}
+function read(key:string):Plans{try{const value=parseStoredRecord(key,'{}') as Record<string,unknown>;return Object.fromEntries(Object.entries(value).map(([claim,raw])=>{const items=Array.isArray(raw)?raw.map((item:any)=>({...blank(),...item,id:item.id||crypto.randomUUID()})):[{...blank(),...(raw as Partial<Experiment>)}];return [claim,items]}))}catch{return {}}}
 const required:(keyof Experiment)[]=['name','dataset','comparator','outcome','metric','threshold','analysis'];
 export function ClaimMeasurementAlignment({reportId,claims}:{reportId:string;claims:{id:string;text:string}[]}){
  const key='novelty-defense-'+reportId+'-measurements';const [plans,setPlans]=useState(()=>read(key));const [storageError,setStorageError]=useState(false);
- const persist=(next:Plans)=>{setPlans(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Plans)=>{setPlans(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const edit=(claimId:string,experiment:Experiment,patch:Partial<Experiment>)=>persist({...plans,[claimId]:(plans[claimId]||[]).map(item=>item.id===experiment.id?{...item,...patch,reviewed:patch.reviewed??(Object.keys(patch).some(field=>field!=='reviewed')?false:item.reviewed)}:item)});
  const add=(claimId:string)=>persist({...plans,[claimId]:[...(plans[claimId]||[]),blank()]});
  const remove=(claimId:string,id:string)=>persist({...plans,[claimId]:(plans[claimId]||[]).filter(item=>item.id!==id)});

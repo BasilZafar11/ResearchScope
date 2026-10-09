@@ -15,6 +15,7 @@ from app.db.session import Session
 from app.models.novelty import NoveltyReport
 from app.analysis import groq_enrichment
 from app.analysis.research_guidance import build_guidance
+from app.search_budget import claim_provider_attempt, DailySearchLimit
 
 STOP = set('a an and are as at be been by for from in into is it of on or that the their this to was were with'.split())
 DISCLAIMER = 'ResearchScope provides search assistance. It does not determine legal patentability, guarantee scientific novelty, or replace professional literature review or patent counsel.'
@@ -226,6 +227,9 @@ def score_report(data, papers, patents, web, queries, warnings):
 
 
 def provider_search(client, engine, **params):
+    if settings.live_serpapi_enabled:
+        try:claim_provider_attempt()
+        except DailySearchLimit:raise ProviderCapacityError() from None
     try:
         result = dict(client.search({'engine':engine,**params}))
     except Exception as exc:

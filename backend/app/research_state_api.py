@@ -14,6 +14,8 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import Session
 from app.models.database import now
 from app.models.novelty import NoveltyReport, NoveltyWorkspace, ResearchState
+from app.research_record_validation import validate_records
+from app.config import SAVED_REPORT_RETENTION_DAYS
 
 router=APIRouter(prefix='/api/novelty/analyses/{report_id}/research-state',tags=['Research workspace'])
 
@@ -33,6 +35,7 @@ class StatePatch(BaseModel):
                 raise ValueError('Invalid workspace record namespace.')
         if set(self.records)&set(self.delete):
             raise ValueError('A record cannot be saved and deleted in the same update.')
+        validate_records(self.records)
         return self
 
 
@@ -40,7 +43,7 @@ def authorized(db,report_id,token):
     report=db.get(NoveltyReport,str(report_id))
     workspace=db.get(NoveltyWorkspace,str(report_id))
     created=report.created_at.replace(tzinfo=timezone.utc) if report and not report.created_at.tzinfo else report.created_at if report else None
-    if not report or report.status!='complete' or not report.saved or not workspace or created+timedelta(days=7)<=now():
+    if not report or report.status!='complete' or not report.saved or not workspace or created+timedelta(days=SAVED_REPORT_RETENTION_DAYS)<=now():
         raise HTTPException(404,'The saved workspace is unavailable or expired.')
     if not token or len(token)>200:
         raise HTTPException(403,'Open an owner or reviewer link to access shared research records.')
@@ -54,7 +57,7 @@ def view(row,report,role):
     created=report.created_at.replace(tzinfo=timezone.utc) if not report.created_at.tzinfo else report.created_at
     return {'version':row.version if row else 0,'records':row.records if row else {},
             'history':row.history if row else [],'role':role,
-            'expires_at':(created+timedelta(days=7)).isoformat(),
+            'expires_at':(created+timedelta(days=SAVED_REPORT_RETENTION_DAYS)).isoformat(),
             'updated_at':row.updated_at.isoformat() if row else None}
 
 

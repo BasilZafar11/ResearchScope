@@ -1,10 +1,11 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {CopyLink} from './research/CopyLink';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useMemo,useState} from 'react';
 import type {Evidence,NoveltyReport} from '../types/novelty';
 
-const read=(key:string,fallback:any)=>{try{return JSON.parse(localStorage.getItem(key)||'')??fallback}catch{return fallback}};
-const write=(key:string,value:unknown)=>localStorage.setItem(key,JSON.stringify(value));
+const read=(key:string,fallback:any)=>{try{return parseStoredRecord(key,'')??fallback}catch{return fallback}};
+const write=(key:string,value:unknown)=>writeStoredRecord(key,JSON.stringify(value));
 const terms=(text:string)=>new Set((text.toLowerCase().match(/[a-z0-9]+/g)||[]).filter(x=>x.length>2));
 const overlap=(a:string,b:string)=>{const aa=terms(a),bb=terms(b);if(!aa.size||!bb.size)return 0;return Math.round(100*[...aa].filter(x=>bb.has(x)).length/new Set([...aa,...bb]).size)};
 const external=(query:string,site='')=>`https://www.google.com/search?q=${encodeURIComponent(`${site} ${query}`.trim())}`;
@@ -43,8 +44,8 @@ export function ResearchToolkit({report,id,tool}:{report:NoveltyReport;id:string
  const synonyms=useMemo(()=>{const found=new Set<string>();for(const [key,values] of Object.entries(TERM_MAP))if(termQuery.toLowerCase().includes(key)){values.forEach(x=>found.add(x))}return [...found]},[termQuery]);
  const retractionUrl=(item:Evidence)=>external(`"${item.title}" (retracted OR correction OR expression of concern)`);
  const qualityItems=['Methods described well enough to assess?','Population or dataset size reported?','A relevant comparator or baseline included?','Limitations stated by the authors?','Code or data available for replication?','Corrections and retraction status checked?'];
- function setDecision(item:Evidence,state:string){const next={...screening,[item.id]:{...screening[item.id],state}};setScreening(next);write(`${root}-screening`,next)}
- function setReason(item:Evidence,reason:string){const next={...screening,[item.id]:{...screening[item.id],reason}};setScreening(next);write(`${root}-screening`,next)}
+ function setDecision(item:Evidence,state:string){const next={...screening,[item.id]:{reason:screening[item.id]?.reason||'',state}};setScreening(next);write(`${root}-screening`,next)}
+ function setReason(item:Evidence,reason:string){const next={...screening,[item.id]:{state:screening[item.id]?.state||'unreviewed',reason}};setScreening(next);write(`${root}-screening`,next)}
  function toggleQueue(item:Evidence){const next=queue.includes(item.id)?queue.filter(x=>x!==item.id):[...queue,item.id];setQueue(next);write(`${root}-queue`,next)}
  function toggleQuality(item:Evidence,value:string){const values=checklists[item.id]||[],next={...checklists,[item.id]:values.includes(value)?values.filter(x=>x!==value):[...values,value]};setChecklists(next);write(`${root}-quality`,next)}
  function addNote(){if(note.trim().length<4)return;const next=[{id:crypto.randomUUID(),text:note.trim(),created_at:new Date().toISOString(),source:noteSource.trim()||undefined},...notes].slice(0,100);setNotes(next);write(`${root}-journal`,next);setNote('');setNoteSource('')}

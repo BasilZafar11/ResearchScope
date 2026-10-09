@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException
 from sqlalchemy import select, text, update, func, desc, delete
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app.config import settings
+from app.config import SAVED_REPORT_RETENTION_DAYS, settings
 from app.db.session import Session, engine
 from app.db.repositories import active, cached
 from app.models.database import Analysis, Signal, now, uid
@@ -52,7 +52,6 @@ def finish_novelty_usage(db, analysis_id, calls_used, status):
     usage.calls_used=min(usage.calls_reserved,max(0,calls_used));usage.status=status
     if budget:
         budget.calls_reserved=max(0,budget.calls_reserved-usage.calls_reserved)
-        budget.calls_used+=usage.calls_used
 
 
 def hosted_search_configured():
@@ -66,7 +65,7 @@ def novelty_report_current(row):
     if not row or row.status!='complete' or not row.report:
         return False
     created=row.created_at if row.created_at.tzinfo else row.created_at.replace(tzinfo=timezone.utc)
-    return created>=now()-(timedelta(days=7) if row.saved else timedelta(hours=1))
+    return created>=now()-(timedelta(days=SAVED_REPORT_RETENTION_DAYS) if row.saved else timedelta(hours=1))
 
 
 class NoveltyInput(BaseModel):
@@ -157,7 +156,7 @@ async def lifespan(app):
                 report.status='failed';report.stage='failed';report.progress=100
                 report.error_message='The server restarted. Please start a new analysis.'
                 finish_novelty_usage(db,report.id,8,'interrupted')
-            retention=now()-timedelta(days=7);temporary=now()-timedelta(hours=1)
+            retention=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS);temporary=now()-timedelta(hours=1)
             db.execute(delete(NoveltyReport).where(((NoveltyReport.saved.is_(True))&(NoveltyReport.created_at<retention))|((NoveltyReport.saved.is_(False))&(NoveltyReport.created_at<temporary))))
             db.execute(delete(NoveltyWorkspace).where(NoveltyWorkspace.report_id.not_in(select(NoveltyReport.id))))
             oldest_day=(now()-timedelta(days=7)).date().isoformat()
@@ -269,7 +268,7 @@ def get_sample_novelty_report():
 @app.get('/api/novelty/analyses')
 def novelty_recent():
     with Session() as db:
-        rows=db.scalars(select(NoveltyReport).where(NoveltyReport.status=='complete',NoveltyReport.is_public.is_(True),NoveltyReport.saved.is_(True),NoveltyReport.created_at>=now()-timedelta(days=7)).order_by(desc(NoveltyReport.created_at)).limit(20))
+        rows=db.scalars(select(NoveltyReport).where(NoveltyReport.status=='complete',NoveltyReport.is_public.is_(True),NoveltyReport.saved.is_(True),NoveltyReport.created_at>=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS)).order_by(desc(NoveltyReport.created_at)).limit(20))
         return [{'id':r.id,'title':r.title,'field':r.field,'overlap_score':r.report.get('overlap_score'),'confidence_score':r.report.get('confidence_score'),'created_at':r.created_at} for r in rows]
 
 
@@ -283,7 +282,7 @@ def create_novelty_analysis(data:NoveltyInput, request:Request, background:Backg
     ip_hash=hmac.new(settings.ip_hash_secret.get_secret_value().encode(),address.encode(),hashlib.sha256).hexdigest()
     day=datetime.now(timezone.utc).date().isoformat()
     with research_lock, Session.begin() as db:
-        retention=now()-timedelta(days=7);temporary=now()-timedelta(hours=1)
+        retention=now()-timedelta(days=SAVED_REPORT_RETENTION_DAYS);temporary=now()-timedelta(hours=1)
         db.execute(delete(NoveltyReport).where(((NoveltyReport.saved.is_(True))&(NoveltyReport.created_at<retention))|((NoveltyReport.saved.is_(False))&(NoveltyReport.created_at<temporary))))
         oldest_day=(now()-timedelta(days=7)).date().isoformat()
         db.execute(delete(NoveltyUsage).where(NoveltyUsage.day_utc<oldest_day))
@@ -334,7 +333,7 @@ def get_novelty_analysis(analysis_id:UUID):
     with Session.begin() as db:
         row=db.get(NoveltyReport,str(analysis_id))
         if not row:return error(404,'NOT_FOUND','This report was not found.')
-        retention=timedelta(days=7) if row.saved else timedelta(hours=1)
+        retention=timedelta(days=SAVED_REPORT_RETENTION_DAYS) if row.saved else timedelta(hours=1)
         created=row.created_at if row.created_at.tzinfo else row.created_at.replace(tzinfo=timezone.utc)
         if created<now()-retention:
             db.delete(row)

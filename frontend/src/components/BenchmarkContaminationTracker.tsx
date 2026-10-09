@@ -1,17 +1,18 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useState} from 'react';
 type Status='documented exposure'|'reported exclusion'|'conflicting disclosures'|'unknown';
 type Disclosure={id:string;model:string;modelVersion:string;benchmark:string;benchmarkVersion:string;trainingCutoff:string;status:Status;sourceUrl:string;sourceTitle:string;quote:string;checkedAt:string;reviewNote:string};
 type Draft=Omit<Disclosure,'id'|'checkedAt'>;
 const emptyDraft=():Draft=>({model:'',modelVersion:'',benchmark:'',benchmarkVersion:'',trainingCutoff:'',status:'unknown',sourceUrl:'',sourceTitle:'',quote:'',reviewNote:''});
-function read(key:string):Disclosure[]{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
+function read(key:string):Disclosure[]{try{const value=parseStoredRecord(key,'[]');return Array.isArray(value)?value:[]}catch{return []}}
 
 export function BenchmarkContaminationTracker({reportId,idea}:{reportId:string;idea:string}){
  const key='novelty-defense-'+reportId+'-benchmark-disclosures';
  const [records,setRecords]=useState<Disclosure[]>(()=>read(key));
  const [draft,setDraft]=useResearchDraft<Draft>(reportId,'BenchmarkContaminationTracker-draft',emptyDraft());
  const [error,setError]=useState(''),[storageError,setStorageError]=useState(false);
- const update=(next:Disclosure[])=>{setRecords(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const update=(next:Disclosure[])=>{setRecords(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const add=()=>{
   if(!draft.model.trim()||!draft.benchmark.trim()){setError('Enter both a model and benchmark.');return}
   if(draft.status!=='unknown'&&(!draft.sourceUrl.trim()||!draft.sourceTitle.trim()||!draft.quote.trim())){setError('A non-unknown disclosure needs a source title, source URL, and quoted passage. Keep the status unknown when evidence is absent.');return}

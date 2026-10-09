@@ -1,3 +1,4 @@
+import {parseStoredRecord} from '../../lib/projectRecords';
 import {useResearchDraft} from '../../lib/researchDraft';
 import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
@@ -11,7 +12,7 @@ const work=z.object({doi:text,title:text,url:text,date:text,language:text,type:t
 const schema=z.object({...recordBase,originalQuery:text,language:text,translatedQuery:text,translationSource:text,translationReviewed:z.boolean(),checkedAt:text,coverage:text,items:z.array(work),selected:z.array(text),translations:z.record(z.string(),z.object({text:text,source:text,reviewed:z.boolean()}))});
 export function selectedDiscoveryEvidence(id:string):Evidence[] {
   try {
-    const rounds=z.array(schema).parse(JSON.parse(localStorage.getItem('research-integrity-'+id+'-multilingual')||'[]'));
+    const rounds=z.array(schema).parse(parseStoredRecord('research-integrity-'+id+'-multilingual','[]'));
     const unique=new Map<string,Evidence>();
     for(const round of rounds)for(const item of round.items)if(round.selected.includes(item.doi))unique.set(item.doi,{id:'doi:'+item.doi.toLowerCase(),source_type:'scholar',title:item.title,source_url:item.url,summary_text:item.abstract,publication_date:item.date,authors:item.authors,similarity_score:0,details:{doi:item.doi,language:item.language||'unknown',provider:'Crossref',retrievedAt:round.checkedAt,query:round.translatedQuery,discoveryStatus:'researcher selected; not scored'}});
     return [...unique.values()];

@@ -1,4 +1,5 @@
 import {ResearchReport} from '../components/research/ResearchReport';
+import {RecordRecoveryNotice} from '../components/research/RecordRecoveryNotice';
 import {useEffect,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {Link,useParams} from 'react-router-dom';
@@ -22,5 +23,5 @@ export function ReportPage({homePath='/',reportBase='/reports'}:{homePath?:strin
  const sourceIds=new Set(r.papers.map(source=>String(source.details?.doi||source.details?.DOI||source.source_url||source.id).replace(/^https?:\/\/doi.org\//i,'').toLowerCase()));
  const unique=new Map(additional.filter(source=>!sourceIds.has(String(source.details?.doi).toLowerCase())).map(source=>[source.id,source]));
  const researchReport={...r,papers:[...r.papers,...unique.values()]};
- return <ResearchReport key={id} report={r} expanded={researchReport} id={id} homePath={homePath} reportBase={reportBase} revision={recordRevision}/>;
+ return <><RecordRecoveryNotice id={id}/><ResearchReport key={id} report={r} expanded={researchReport} id={id} homePath={homePath} reportBase={reportBase} revision={recordRevision}/></>;
 }

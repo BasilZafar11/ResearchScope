@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useEffect,useState} from 'react';
 import {normalizedCondition} from '../lib/researchReview';
 
@@ -9,16 +10,16 @@ type Assessment={verdict:Verdict;reason:string;evidence:string};
 type Audit={proposed:Method;baseline:Method;assessments:Record<string,Assessment>};
 const blankMethod=():Method=>({name:'',dataset:'',split:'',preprocessing:'',compute:'',tuning:'',metric:'',protocol:'',version:'',source:''});
 const blankAudit=():Audit=>({proposed:blankMethod(),baseline:blankMethod(),assessments:{}});
-function read(key:string):Audit{try{const value=JSON.parse(localStorage.getItem(key)||'null');if(!value)return blankAudit();return {proposed:{...blankMethod(),...value.proposed},baseline:{...blankMethod(),...value.baseline},assessments:value.assessments||{}}}catch{return blankAudit()}}
+function read(key:string):Audit{try{const value=parseStoredRecord(key,'null');if(!value)return blankAudit();return {proposed:{...blankMethod(),...value.proposed},baseline:{...blankMethod(),...value.baseline},assessments:value.assessments||{}}}catch{return blankAudit()}}
 
 export function BaselineFairnessAudit({reportId}:{reportId:string}){
  const key='novelty-defense-'+reportId+'-baseline-fairness';
  const [audit,setAudit]=useState(()=>read(key));
  const [storageError,setStorageError]=useState(false);
- const [comparisons,setComparisons]=useState<{id:string;at:string;audit:Audit}[]>(()=>{try{const value=JSON.parse(localStorage.getItem('novelty-defense-'+reportId+'-baseline-comparisons')||'[]');return Array.isArray(value)?value:[];}catch{return [];}});
+ const [comparisons,setComparisons]=useState<{id:string;at:string;audit:Audit}[]>(()=>{try{const value=parseStoredRecord('novelty-defense-'+reportId+'-baseline-comparisons','[]');return Array.isArray(value)?value:[];}catch{return [];}});
  const [error,setError]=useState('');
- function saveComparison(){if(!audit.proposed.name.trim()||!audit.baseline.name.trim()){setError('Name both methods before preserving a comparison.');return;}try{const next=[...comparisons,{id:crypto.randomUUID(),at:new Date().toISOString(),audit}];localStorage.setItem('novelty-defense-'+reportId+'-baseline-comparisons',JSON.stringify(next));setComparisons(next);setError('');}catch{setError('The comparison could not be saved.');}}
- const persist=(next:Audit)=>{setAudit(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ function saveComparison(){if(!audit.proposed.name.trim()||!audit.baseline.name.trim()){setError('Name both methods before preserving a comparison.');return;}try{const next=[...comparisons,{id:crypto.randomUUID(),at:new Date().toISOString(),audit}];writeStoredRecord('novelty-defense-'+reportId+'-baseline-comparisons',JSON.stringify(next));setComparisons(next);setError('');}catch{setError('The comparison could not be saved.');}}
+ const persist=(next:Audit)=>{setAudit(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  useEffect(()=>{const listener=(event:Event)=>{const detail=(event as CustomEvent<{name:string;source:string}>).detail;if(!detail?.name)return;persist({...audit,baseline:{...audit.baseline,name:detail.name,source:detail.source||''}})};window.addEventListener('research-baseline-select',listener);return()=>window.removeEventListener('research-baseline-select',listener)},[audit]);
  const methodField=(side:'proposed'|'baseline',field:keyof Method,value:string)=>{const condition=conditions.find(name=>fieldByCondition[name]===field);persist({...audit,[side]:{...audit[side],[field]:value},assessments:field==='name'?{}:condition?{...audit.assessments,[condition]:{verdict:'unreviewed',reason:'',evidence:''}}:audit.assessments});};
  const values:Record<string,[string,string]>={dataset:[audit.proposed.dataset,audit.baseline.dataset], 'train/test split':[audit.proposed.split,audit.baseline.split],preprocessing:[audit.proposed.preprocessing,audit.baseline.preprocessing],'compute budget':[audit.proposed.compute,audit.baseline.compute],'tuning budget':[audit.proposed.tuning,audit.baseline.tuning],'evaluation metric':[audit.proposed.metric,audit.baseline.metric],'evaluation protocol':[audit.proposed.protocol,audit.baseline.protocol],'method version and code':[audit.proposed.version,audit.baseline.version]};

@@ -1,13 +1,14 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useMemo,useState} from 'react';
 type Task={id:string;phase:string;title:string;hours:number;cost:number;required:boolean;done:boolean;blocker:string};
 type Plan={claimId:string;weeks:number;hoursPerWeek:number;budget:number;currency:string;dataAccess:'ready'|'limited'|'blocked';compute:string;skills:string;experimentName:string;dataset:string;metric:string;threshold:string;tasks:Task[]};
 function blank():Plan{return {claimId:'',weeks:8,hoursPerWeek:8,budget:0,currency:'USD',dataAccess:'limited',compute:'',skills:'',experimentName:'',dataset:'',metric:'',threshold:'',tasks:[]}}
-function read(key:string):Plan{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value?{...blank(),...value,tasks:Array.isArray(value.tasks)?value.tasks:[]}:blank()}catch{return blank()}}
-function readExperiments(key:string,claimId:string){try{const value=JSON.parse(localStorage.getItem(key)||'{}');return Array.isArray(value[claimId])?value[claimId]:[]}catch{return []}}
+function read(key:string):Plan{try{const value=parseStoredRecord(key,'null');return value?{...blank(),...value,tasks:Array.isArray(value.tasks)?value.tasks:[]}:blank()}catch{return blank()}}
+function readExperiments(key:string,claimId:string){try{const value=parseStoredRecord(key,'{}');return Array.isArray(value[claimId])?value[claimId]:[]}catch{return []}}
 const starter:Omit<Task,'id'>[]=[{phase:'Prerequisite',title:'Confirm permissions and data access',hours:2,cost:0,required:true,done:false,blocker:'Data access is not confirmed'},{phase:'Primary study',title:'Implement and run the primary experiment',hours:12,cost:0,required:true,done:false,blocker:''},{phase:'Primary study',title:'Run the matched baseline comparison',hours:10,cost:0,required:true,done:false,blocker:''},{phase:'Robustness',title:'Run one robustness or sensitivity check',hours:6,cost:0,required:false,done:false,blocker:''},{phase:'Reporting',title:'Record analysis, limitations, and reproducibility details',hours:4,cost:0,required:true,done:false,blocker:''}];
 export function MinimumStudyPlanner({reportId,claims}:{reportId:string;claims:{id:string;text:string}[]}){
  const key='novelty-defense-'+reportId+'-study-plan';const [plan,setPlan]=useState(()=>read(key));const [storageError,setStorageError]=useState(false);
- const persist=(next:Plan)=>{setPlan(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Plan)=>{setPlan(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const experiments=readExperiments('novelty-defense-'+reportId+'-measurements',plan.claimId);const selectedExperiment=experiments[0];
  const initialize=()=>{const suggested=selectedExperiment?{experimentName:selectedExperiment.name,dataset:selectedExperiment.dataset,metric:selectedExperiment.metric,threshold:selectedExperiment.threshold}:{};persist({...plan,...suggested,tasks:starter.map(task=>({...task,id:crypto.randomUUID()}))})};
  const updateTask=(id:string,patch:Partial<Task>)=>persist({...plan,tasks:plan.tasks.map(task=>task.id===id?{...task,...patch}:task)});

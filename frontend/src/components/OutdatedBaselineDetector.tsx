@@ -1,16 +1,17 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
 type Review={status:'unreviewed'|'considered'|'not relevant';reason:string};
 type Saved={baselineId:string;task:string;dataset:string;protocol:string;reviews:Record<string,Review>};
 const tokenSet=(text:string)=>new Set((text.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(word=>word.length>2));
 const matchScore=(a:string,b:string)=>{const x=tokenSet(a),y=tokenSet(b);if(!x.size||!y.size)return 0;return Math.round(100*[...x].filter(word=>y.has(word)).length/new Set([...x,...y]).size)};
-function read(key:string):Saved{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value?{baselineId:value.baselineId||'',task:value.task||'',dataset:value.dataset||'',protocol:value.protocol||'',reviews:value.reviews||{}}:{baselineId:'',task:'',dataset:'',protocol:'',reviews:{}}}catch{return {baselineId:'',task:'',dataset:'',protocol:'',reviews:{}}}}
+function read(key:string):Saved{try{const value=parseStoredRecord(key,'null');return value?{baselineId:value.baselineId||'',task:value.task||'',dataset:value.dataset||'',protocol:value.protocol||'',reviews:value.reviews||{}}:{baselineId:'',task:'',dataset:'',protocol:'',reviews:{}}}catch{return {baselineId:'',task:'',dataset:'',protocol:'',reviews:{}}}}
 
 export function OutdatedBaselineDetector({reportId,papers,idea}:{reportId:string;papers:Evidence[];idea:string}){
  const key='novelty-defense-'+reportId+'-newer-baselines';
  const [saved,setSaved]=useState(()=>read(key));
  const [storageError,setStorageError]=useState(false);
- const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Saved)=>{setSaved(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const baseline=papers.find(paper=>paper.id===saved.baselineId);
  const year=Number((baseline?.publication_date||baseline?.priority_date||'').match(/\d{4}/)?.[0]||0);
  const taskContext=[saved.task,saved.dataset,saved.protocol].filter(Boolean).join(' ');

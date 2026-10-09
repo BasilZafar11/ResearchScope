@@ -1,6 +1,8 @@
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+SAVED_REPORT_RETENTION_DAYS = 12
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
@@ -11,8 +13,8 @@ class Settings(BaseSettings):
     groq_model: str = 'openai/gpt-oss-20b'
     ip_hash_secret: SecretStr = SecretStr('')
     hosted_reports_per_ip_per_day: int = 2
-    hosted_serpapi_daily_budget: int = 100
-    hosted_serpapi_reserve: int = 40
+    hosted_serpapi_daily_budget: int = 20
+    hosted_serpapi_reserve: int = 0
     live_serpapi_enabled: bool = False
     cors_origins: list[str] = ['http://localhost:5173', 'http://127.0.0.1:5173']
     request_timeout_seconds: float = 15

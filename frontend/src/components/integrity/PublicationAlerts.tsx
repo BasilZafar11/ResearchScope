@@ -1,3 +1,4 @@
+import {parseStoredRecord} from '../../lib/projectRecords';
 import {useResearchDraft} from '../../lib/researchDraft';
 import {useState} from 'react';
 import {z} from 'zod';
@@ -10,7 +11,7 @@ const noticeSchema=z.object({doi:z.string(),title:z.string(),url:z.string(),date
 const checkSchema=z.object({doi:z.string(),checkedAt:z.string(),notices:z.array(noticeSchema),changed:z.boolean(),acknowledged:z.boolean(),coverage:z.string(),truncated:z.boolean()});
 const schema=z.record(z.string(),checkSchema);
 function affectedLocalRecords(id:string,sourceId:string) {
-  const read=(suffix:string):unknown=>{try{return JSON.parse(localStorage.getItem(suffix)||'[]');}catch{return [];}};
+  const read=(suffix:string):unknown=>{try{return parseStoredRecord(suffix,'[]');}catch{return [];}};
   const tasks=read('novelty-defense-'+id+'-tasks');
   const citations=read('research-integrity-'+id+'-citations');
   const decisions=read('novelty-defense-'+id+'-decision-history');

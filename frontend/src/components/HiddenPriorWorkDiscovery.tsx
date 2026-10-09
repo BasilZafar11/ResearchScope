@@ -1,13 +1,14 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useState} from 'react';
 type Kind='thesis or dissertation'|'preprint'|'technical report'|'standard'|'poster or abstract';
 type RecordEntry={id:string;title:string;kind:Kind;url:string;host:string;date:string;datePrecision:'day'|'month'|'year'|'unknown';excerpt:string;query:string;capturedAt:string;review:'unreviewed'|'verified'|'not relevant'};
 const kinds:Kind[]=['thesis or dissertation','preprint','technical report','standard','poster or abstract'];
 const templates:Record<Kind,(idea:string)=>string>={'thesis or dissertation':idea=>'"'+idea+'" thesis OR dissertation repository','preprint':idea=>'"'+idea+'" preprint arXiv OR OSF','technical report':idea=>'"'+idea+'" "technical report" OR "working paper"','standard':idea=>'"'+idea+'" standard OR specification guideline','poster or abstract':idea=>'"'+idea+'" poster OR conference abstract symposium'};
-function read(key:string):RecordEntry[]{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
+function read(key:string):RecordEntry[]{try{const value=parseStoredRecord(key,'[]');return Array.isArray(value)?value:[]}catch{return []}}
 export function HiddenPriorWorkDiscovery({reportId,idea}:{reportId:string;idea:string}){
  const key='novelty-defense-'+reportId+'-hidden-prior-work';const [records,setRecords]=useState(()=>read(key));const [draft,setDraft]=useResearchDraft(reportId,'HiddenPriorWorkDiscovery-draft',{title:'',kind:kinds[0] as Kind,url:'',host:'',date:'',datePrecision:'unknown' as RecordEntry['datePrecision'],excerpt:'',query:''});const [error,setError]=useState(''),[storageError,setStorageError]=useState(false);
- const persist=(next:RecordEntry[])=>{setRecords(next);window.dispatchEvent(new CustomEvent('research-prior-work-update',{detail:next}));try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:RecordEntry[])=>{setRecords(next);window.dispatchEvent(new CustomEvent('research-prior-work-update',{detail:next}));try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const q=templates[draft.kind](idea);const searchUrl='https://www.google.com/search?q='+encodeURIComponent(q);
  const add=()=>{if(!draft.title.trim()||!draft.url.trim()){setError('A record title and source URL are required so this result can be traced.');return}let parsed:URL;try{parsed=new URL(draft.url)}catch{setError('Enter a valid http or https record URL.');return}if(!['http:','https:'].includes(parsed.protocol)){setError('Only http and https record URLs are supported.');return}if(records.some(record=>record.url===parsed.href)){setError('This source URL is already recorded.');return}persist([{...draft,id:crypto.randomUUID(),title:draft.title.trim(),url:parsed.href,query:draft.query.trim()||q,capturedAt:new Date().toISOString(),review:'unreviewed' as const},...records].slice(0,200));setDraft({...draft,title:'',url:'',host:'',date:'',excerpt:'',query:''});setError('')};
  const update=(id:string,patch:Partial<RecordEntry>)=>persist(records.map(record=>record.id===id?{...record,...patch}:record));

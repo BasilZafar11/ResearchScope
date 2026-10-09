@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useMemo,useState} from 'react';
 import type {Evidence,NoveltyReport} from '../types/novelty';
 import {collectProjectRecords} from '../lib/projectRecords';
@@ -14,7 +15,7 @@ export function classifyEvidenceDate(value?:string,cutoff=''):Availability{
  return value.slice(0,10)<=cutoff?'before cutoff':'after cutoff';
 }
 function identity(item:Evidence){return String(item.details?.doi||item.details?.DOI||item.source_url||item.patent_id||item.title).trim().replace(/^https?:\/\/(?:dx\.)?doi.org\//i,'').toLocaleLowerCase()}
-function read(key:string):Snapshot[]{try{const items=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(items)?items:[]}catch{return []}}
+function read(key:string):Snapshot[]{try{const items=parseStoredRecord(key,'[]');return Array.isArray(items)?items:[]}catch{return []}}
 function exportJson(value:unknown,name:string){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 export function EvidenceCutoffSnapshots({reportId,report,evidence}:{reportId:string;report:NoveltyReport;evidence:Evidence[]}){
  const key='novelty-defense-'+reportId+'-evidence-snapshots';const [snapshots,setSnapshots]=useState(()=>read(key));const [cutoff,setCutoff]=useState(new Date().toISOString().slice(0,10));const [left,setLeft]=useState(''),[right,setRight]=useState('');const [error,setError]=useState('');
@@ -27,9 +28,9 @@ export function EvidenceCutoffSnapshots({reportId,report,evidence}:{reportId:str
   let assessments:ProjectRecords;try{assessments=collectProjectRecords(reportId);delete assessments['defense:evidence-snapshots'];}catch{setError('Saved assessments could not be read. Export or recover browser data before taking a snapshot.');return;}
   const snapshot:Snapshot={id:crypto.randomUUID(),createdAt:new Date().toISOString(),cutoff,reportTitle:report.input.title,reportId,overlapScore:report.overlap_score,methodologyVersion:report.methodology_version,queries:report.queries,included:included.map(toSource),uncertain:uncertain.map(toSource),undated:undated.map(toSource),excluded:after.map(toSource),assessments};
   const next=[snapshot,...snapshots];
-  try{const serialized=JSON.stringify(next);if(serialized.length>1500000)throw new Error('Snapshot history exceeds the browser storage limit. Export your snapshots and remove older ones.');localStorage.setItem(key,serialized);setSnapshots(next);setError('')}catch(reason){setError(reason instanceof Error?reason.message:'Could not save the snapshot. Export or remove older snapshots.')}
+  try{const serialized=JSON.stringify(next);if(serialized.length>1500000)throw new Error('Snapshot history exceeds the browser storage limit. Export your snapshots and remove older ones.');writeStoredRecord(key,serialized);setSnapshots(next);setError('')}catch(reason){setError(reason instanceof Error?reason.message:'Could not save the snapshot. Export or remove older snapshots.')}
  };
- const remove=(id:string)=>{const next=snapshots.filter(snapshot=>snapshot.id!==id);try{localStorage.setItem(key,JSON.stringify(next));setSnapshots(next)}catch{setError('Could not update snapshot history.')}};
+ const remove=(id:string)=>{const next=snapshots.filter(snapshot=>snapshot.id!==id);try{writeStoredRecord(key,JSON.stringify(next));setSnapshots(next)}catch{setError('Could not update snapshot history.')}};
  const first=snapshots.find(snapshot=>snapshot.id===left),second=snapshots.find(snapshot=>snapshot.id===right);
  const diff=first&&second?{added:second.included.filter(item=>!first.included.some(old=>old.identity===item.identity)),removed:first.included.filter(item=>!second.included.some(now=>now.identity===item.identity))}:null;
  const changed=first&&second?second.included.filter(item=>first.included.some(old=>old.identity===item.identity&&JSON.stringify(old)!==JSON.stringify(item))):[];

@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useMemo,useState} from 'react';
 type Category='negative finding'|'implementation failure'|'inconclusive'|'could not reproduce'|'other';
@@ -6,10 +7,10 @@ type Draft=Omit<Failure,'id'|'created'|'updated'>;
 const blank=():Draft=>({topic:'',method:'',methodVersion:'',dataset:'',setting:'',category:'negative finding',outcome:'',lesson:'',nextStep:'',artifact:''});
 const tokens=(text:string)=>new Set((text.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(word=>word.length>2));
 const similarity=(a:string,b:string)=>{const left=tokens(a),right=tokens(b);if(!left.size||!right.size)return 0;return Math.round(100*[...left].filter(word=>right.has(word)).length/new Set([...left,...right]).size)};
-function read(key:string):Failure[]{try{const values=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(values)?values.map((entry:any)=>{const data=entry.data||entry;return {...blank(),...data,id:entry.id||crypto.randomUUID(),created:entry.created||new Date().toISOString(),updated:entry.updated||entry.created||new Date().toISOString(),category:entry.category||'negative finding',topic:data.topic||entry.title||''}}):[]}catch{return []}}
+function read(key:string):Failure[]{try{const values=parseStoredRecord(key,'[]');return Array.isArray(values)?values.map((entry:any)=>{const data=entry.data||entry;return {...blank(),...data,id:entry.id||crypto.randomUUID(),created:entry.created||new Date().toISOString(),updated:entry.updated||entry.created||new Date().toISOString(),category:entry.category||'negative finding',topic:data.topic||entry.title||''}}):[]}catch{return []}}
 export function FailureKnowledgeNotebook(){
  const key='novelty-shared-failures';const [entries,setEntries]=useState(()=>read(key));const [draft,setDraft]=useResearchDraft<Draft>('shared-failures','FailureKnowledgeNotebook-draft',blank());const [editing,setEditing]=useResearchDraft('shared-failures','FailureKnowledgeNotebook-editing','');const [search,setSearch]=useResearchDraft('shared-failures','FailureKnowledgeNotebook-search','');const [error,setError]=useState(''),[storageError,setStorageError]=useState(false);
- const persist=(next:Failure[])=>{setEntries(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Failure[])=>{setEntries(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const saveEntry=()=>{if(!editing&&entries.length>=300){setError('Export and remove older notes before adding another. Existing notes were retained.');return;}if(!draft.topic.trim()||!draft.method.trim()||!draft.outcome.trim()||!draft.lesson.trim()){setError('Topic, method, outcome, and lesson are required.');return}if(draft.artifact){try{const url=new URL(draft.artifact);if(!['https:','http:'].includes(url.protocol))throw new Error()}catch{setError('Use a valid http or https artifact link, or leave it blank.');return}}const now=new Date().toISOString();const existing=entries.find(entry=>entry.id===editing);const entry:Failure={...draft,id:editing||crypto.randomUUID(),created:existing?.created||now,updated:now};persist([entry,...entries.filter(item=>item.id!==entry.id)]);setDraft(blank());setEditing('');setError('')};
  const edit=(entry:Failure)=>{setEditing(entry.id);setDraft({...entry})};
  const remove=(id:string)=>persist(entries.filter(entry=>entry.id!==id));

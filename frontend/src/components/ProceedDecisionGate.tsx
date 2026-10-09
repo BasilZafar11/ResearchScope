@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useEffect,useState} from 'react';
 type RatingKey='importance'|'feasibility'|'overlap'|'evidence';
 type Rating={value:number;reason:string};
@@ -6,8 +7,8 @@ type Decision={id:string;createdAt:string;choice:Choice;rationale:string;assumpt
 type Draft=Omit<Decision,'id'|'createdAt'|'snapshot'>;
 const blankRatings=():Record<RatingKey,Rating>=>({importance:{value:3,reason:''},feasibility:{value:3,reason:''},overlap:{value:3,reason:''},evidence:{value:3,reason:''}});
 const blank=():Draft=>({choice:'revise the scope',rationale:'',assumptions:'',blockers:'',changeEvidence:'',revisitDate:'',reviewers:'',ratings:blankRatings()});
-function readValue(key:string):any{try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
-function readHistory(key:string):Decision[]{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
+function readValue(key:string):any{try{return parseStoredRecord(key,'null')}catch{return null}}
+function readHistory(key:string):Decision[]{try{const value=parseStoredRecord(key,'[]');return Array.isArray(value)?value:[]}catch{return []}}
 const readiness=(status:string,title:string,detail:string)=>({status,title,detail});
 const weight:Record<RatingKey,number>={importance:25,feasibility:25,overlap:25,evidence:25};
 const keyNames:RatingKey[]=['importance','feasibility','overlap','evidence'];
@@ -59,8 +60,8 @@ export function ProceedDecisionGate({reportId}:{reportId:string}){
  const critical=feasibilityBlockers.length>0||taskBlockers>0;
  const score=Math.round(keyNames.reduce((sum,key)=>sum+draft.ratings[key].value*weight[key],0)/5);
  const suggested=critical?'Pause until feasibility blockers are resolved':readinessIncomplete?'Revise the plan and complete the missing reviews':score>=70?'Proceed to a scoped pilot for review':'Revise the scope or gather stronger evidence';
- const persistDraft=(next:Draft)=>{setDraft(next);try{localStorage.setItem(draftKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
- const saveDecision=()=>{if(!draft.rationale.trim()){setStorageError(false);return}const entry:Decision={...draft,id:crypto.randomUUID(),createdAt:new Date().toISOString(),snapshot:fingerprint};const next=[entry,...history].slice(0,50);setHistory(next);try{localStorage.setItem(historyKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persistDraft=(next:Draft)=>{setDraft(next);try{writeStoredRecord(draftKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const saveDecision=()=>{if(!draft.rationale.trim()){setStorageError(false);return}const entry:Decision={...draft,id:crypto.randomUUID(),createdAt:new Date().toISOString(),snapshot:fingerprint};const next=[entry,...history].slice(0,50);setHistory(next);try{writeStoredRecord(historyKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const currentFingerprint=fingerprint;
  return <>
   <p>This gate assembles the saved reviews, feasibility blockers, and team tasks. Ratings and the suggestion are prompts for a decision meeting; the researcher records the actual decision and why.</p>

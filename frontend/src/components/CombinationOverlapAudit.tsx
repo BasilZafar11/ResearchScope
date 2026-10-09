@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
@@ -16,12 +17,12 @@ const emptyState=(components:string):AuditState=>({components,componentReviews:{
 
 function readState(key:string,fallback:AuditState):AuditState{
  try{
-  const value=JSON.parse(localStorage.getItem(key)||'null') as Partial<AuditState>|null;
+  const value=parseStoredRecord(key,'null') as Partial<AuditState>|null;
   if(!value||typeof value.components!=='string')return fallback;
   return {components:value.components,componentReviews:value.componentReviews||{},combinationReviews:value.combinationReviews||{},manualSources:Array.isArray(value.manualSources)?value.manualSources:[]};
  }catch{return fallback}
 }
-function readPriorSources(reportId:string):PriorSource[]{try{const value=JSON.parse(localStorage.getItem('novelty-defense-'+reportId+'-hidden-prior-work')||'[]');return Array.isArray(value)?value.map((item:any)=>({id:'prior:'+item.id,title:item.title,url:item.url||'',excerpt:item.excerpt||''})):[]}catch{return []}}
+function readPriorSources(reportId:string):PriorSource[]{try{const value=parseStoredRecord('novelty-defense-'+reportId+'-hidden-prior-work','[]');return Array.isArray(value)?value.map((item:any)=>({id:'prior:'+item.id,title:item.title,url:item.url||'',excerpt:item.excerpt||''})):[]}catch{return []}}
 
 export function CombinationOverlapAudit({reportId,initialComponents,evidence}:{reportId:string;initialComponents:string;evidence:Evidence[]}){
  const storageKey='novelty-defense-'+reportId+'-combination-audit';
@@ -43,7 +44,7 @@ export function CombinationOverlapAudit({reportId,initialComponents,evidence}:{r
  const reviewedCombinationCount=candidates.filter(({item})=>components.length>0&&components.every(component=>{const review=audit.componentReviews[item.id+':'+component.toLocaleLowerCase()];return review?.state==='supports component'&&Boolean(review.excerpt.trim())})&&audit.combinationReviews[item.id]?.confirmed&&Boolean(audit.combinationReviews[item.id]?.excerpt.trim())).length;
  const update=(next:AuditState)=>{
   setAudit(next);
-  try{localStorage.setItem(storageKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}
+  try{writeStoredRecord(storageKey,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}
  };
  const setComponentReview=(key:string,patch:Partial<ComponentReview>)=>{
   const current=audit.componentReviews[key]||{state:'unreviewed' as const,excerpt:'',note:''};

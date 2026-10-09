@@ -9,6 +9,7 @@ import serpapi
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from app.config import settings
 from app.errors import EngineError
+from app.search_budget import claim_provider_attempt, DailySearchLimit
 
 logger = logging.getLogger('market.search')
 FIXTURES = Path(__file__).resolve().parents[1] / 'fixtures'
@@ -65,6 +66,7 @@ class SearchClient:
             raise EngineError('AUTH_ERROR')
         try:
             client = serpapi.Client(api_key=settings.serpapi_key.get_secret_value(), timeout=settings.request_timeout_seconds)
+            claim_provider_attempt()
             with self._count_lock:
                 self.provider_attempts[engine] += 1
             result = dict(client.search({'engine': engine, **params}))
@@ -87,6 +89,9 @@ class SearchClient:
                 self.halted = True
                 raise EngineError('ALLOWANCE_UNAVAILABLE') from None
             raise EngineError('ENGINE_UNAVAILABLE' if code >= 500 else 'INVALID_RESPONSE') from None
+        except DailySearchLimit:
+            self.halted = True
+            raise EngineError('ALLOWANCE_UNAVAILABLE') from None
         except EngineError:
             raise
         except Exception:

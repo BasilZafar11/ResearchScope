@@ -1,3 +1,4 @@
+import {parseStoredRecord} from '../lib/projectRecords';
 import {useResearchDraft} from '../lib/researchDraft';
 import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
@@ -7,7 +8,7 @@ import {SourceLink} from './integrity/Shared';
 
 const work=z.object({doi:z.string(),title:z.string(),url:z.string(),date:z.string(),language:z.string(),type:z.string(),abstract:z.string(),authors:z.array(z.string()),relations:z.record(z.string(),z.unknown()).optional(),links:z.array(z.record(z.string(),z.unknown())).optional(),licenses:z.array(z.record(z.string(),z.unknown())).optional()});
 const schema=z.object({id:z.string(),query:z.string(),intent:z.string(),sourceType:z.string(),afterYear:z.string(),at:z.string(),items:z.array(work),selected:z.array(z.string()),coverage:z.string()});
-export function retrievedEvidence(id:string):Evidence[]{try{const rounds=z.array(schema).parse(JSON.parse(localStorage.getItem('research-integrity-'+id+'-retrieval')||'[]'));const sources=new Map<string,Evidence>();for(const round of rounds)for(const item of round.items)if(round.selected.includes(item.doi))sources.set(item.doi.toLowerCase(),{id:'doi:'+item.doi.toLowerCase(),source_type:'scholar',title:item.title,summary_text:item.abstract,source_url:item.url,publication_date:item.date,authors:item.authors,similarity_score:0,details:{doi:item.doi,sourceType:item.type,provider:'Crossref',retrievedAt:round.at,query:round.query,relations:item.relations,fullTextLinks:item.links,licenses:item.licenses,review:'selected by researcher; not scored'}});return [...sources.values()];}catch{return [];}}
+export function retrievedEvidence(id:string):Evidence[]{try{const rounds=z.array(schema).parse(parseStoredRecord('research-integrity-'+id+'-retrieval','[]'));const sources=new Map<string,Evidence>();for(const round of rounds)for(const item of round.items)if(round.selected.includes(item.doi))sources.set(item.doi.toLowerCase(),{id:'doi:'+item.doi.toLowerCase(),source_type:'scholar',title:item.title,summary_text:item.abstract,source_url:item.url,publication_date:item.date,authors:item.authors,similarity_score:0,details:{doi:item.doi,sourceType:item.type,provider:'Crossref',retrievedAt:round.at,query:round.query,relations:item.relations,fullTextLinks:item.links,licenses:item.licenses,review:'selected by researcher; not scored'}});return [...sources.values()];}catch{return [];}}
 export function ResearchRetrieval({id,idea}:{id:string;idea:string}){
   const local=useLocalRecords('research-integrity-'+id+'-retrieval',schema);
   const records={...local,save:(next:z.infer<typeof schema>[])=>{const success=local.save(next);if(success)window.dispatchEvent(new Event('research-evidence-updated'));return success;}};

@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useMemo,useState} from 'react';
 import type {Evidence} from '../types/novelty';
 
@@ -8,7 +9,7 @@ const fields:(keyof Boundaries)[]=['method','population','setting','condition'];
 const tokens=(text:string)=>new Set((text.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(word=>word.length>2));
 const score=(left:string,right:string)=>{const a=tokens(left),b=tokens(right);if(!a.size||!b.size)return 0;return Math.round(100*[...a].filter(word=>b.has(word)).length/new Set([...a,...b]).size)};
 const initialBoundaries=():Boundaries=>({method:'',population:'',setting:'',condition:''});
-function read(key:string,initial:string):Saved{try{const value=JSON.parse(localStorage.getItem(key)||'null');if(!value)return {original:initial,boundaries:initialBoundaries(),history:[]};return {original:typeof value.original==='string'?value.original:initial,boundaries:{...initialBoundaries(),...value.boundaries},history:Array.isArray(value.history)?value.history:[]}}catch{return {original:initial,boundaries:initialBoundaries(),history:[]}}}
+function read(key:string,initial:string):Saved{try{const value=parseStoredRecord(key,'null');if(!value)return {original:initial,boundaries:initialBoundaries(),history:[]};return {original:typeof value.original==='string'?value.original:initial,boundaries:{...initialBoundaries(),...value.boundaries},history:Array.isArray(value.history)?value.history:[]}}catch{return {original:initial,boundaries:initialBoundaries(),history:[]}}}
 
 export function ClaimBoundaryEditor({reportId,initialClaim,evidence}:{reportId:string;initialClaim:string;evidence:Evidence[]}){
  const key='novelty-defense-'+reportId+'-claim-boundaries';
@@ -24,7 +25,7 @@ export function ClaimBoundaryEditor({reportId,initialClaim,evidence}:{reportId:s
   const byBoundary=fields.map(field=>({field,terms:[...tokens(saved.boundaries[field])].filter(term=>sourceWords.has(term))}));
   return {item,originalScore,revisedScore,delta:revisedScore-originalScore,byBoundary};
  }).sort((a,b)=>b.delta-a.delta||b.revisedScore-a.revisedScore),[evidence,saved.original,revised,saved.boundaries]);
- const persist=(next:Saved)=>{setSaved(next);try{localStorage.setItem(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
+ const persist=(next:Saved)=>{setSaved(next);try{writeStoredRecord(key,JSON.stringify(next));setStorageError(false)}catch{setStorageError(true)}};
  const saveRevision=()=>{const revision:Revision={id:crypto.randomUUID(),created:new Date().toISOString(),original:saved.original,revised,boundaries:{...saved.boundaries}};persist({...saved,history:[revision,...saved.history].slice(0,30)})};
  const query='\"'+revised.replaceAll('\"',' ')+'\"';
  return <>

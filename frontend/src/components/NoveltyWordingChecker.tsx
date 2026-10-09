@@ -1,3 +1,4 @@
+import {parseStoredRecord,writeStoredRecord} from '../lib/projectRecords';
 import {useState} from 'react';
 import type {Evidence} from '../types/novelty';
 
@@ -5,8 +6,8 @@ type ClaimState={decision:'unreviewed'|'supported'|'narrowed'|'withdrawn';eviden
 type SavedState={text:string;claims:Record<string,ClaimState>};
 const phrases=/\b(?:first(?:\s+(?:study|work|paper|demonstration|system|method))?|novel|unique|unprecedented|never before|only(?:\s+(?:study|work|paper|demonstration))?|no prior work|state of the art)\b/giu;
 const blankClaim=():ClaimState=>({decision:'unreviewed',evidenceIds:[],field:'',from:'',through:'',sourceCoverage:'',revision:'',reason:''});
-function read(key:string,fallback:SavedState):SavedState{try{const parsed=JSON.parse(localStorage.getItem(key)||'null');if(!parsed||typeof parsed.text!=='string')return fallback;return {text:parsed.text,claims:parsed.claims||{}}}catch{return fallback}}
-function save(key:string,value:SavedState){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}}
+function read(key:string,fallback:SavedState):SavedState{try{const parsed=parseStoredRecord(key,'null');if(!parsed||typeof parsed.text!=='string')return fallback;return {text:parsed.text,claims:parsed.claims||{}}}catch{return fallback}}
+function save(key:string,value:SavedState){try{writeStoredRecord(key,JSON.stringify(value));return true}catch{return false}}
 function sentenceFor(text:string,index:number,length:number){const start=Math.max(text.lastIndexOf('.',index),text.lastIndexOf('!',index),text.lastIndexOf('?',index),text.lastIndexOf('\n',index))+1;const ends=['.', '!', '?','\n'].map(token=>text.indexOf(token,index+length)).filter(end=>end>=0);const end=ends.length?Math.min(...ends):text.length;return text.slice(start,end).trim()}
 
 export function NoveltyWordingChecker({reportId,initialText,evidence}:{reportId:string;initialText:string;evidence:Evidence[]}){
